@@ -8,3 +8,6 @@ data2/validation-*
 data2/train-*
 *validation-*
 *train-*
+*.pyc
+'#'*
+.#*

@@ -69,7 +69,7 @@ CHKPTBASE =  CHKPOINTDIR + '/model.ckpt'	# base name used for checkpoints
 LOGDIR = OUTDIR + '/log_graph'			#create folder manually
 #OUTPUTDIR = i_outdir
 
-NUM_THREADS = 4  #used for enqueueing TFRecord data 
+NUM_THREADS = 16  #used for enqueueing TFRecord data 
 #=============================================
 
 def getImage(fnames, nepochs=None) :
@@ -177,7 +177,7 @@ logits = tf.matmul(h_fc1, W_fc2) + b_fc2
 
 # Step 5: define loss function
 # use cross entropy loss of the real labels with the softmax of logits
-summaryloss = tf.nn.softmax_cross_entropy_with_logits(logits, Y)
+summaryloss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
 meanloss = tf.reduce_mean(summaryloss)
 
 # Step 6: define training op
@@ -189,7 +189,7 @@ optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(meanloss, global_st
 
 # The nodes are used for running the validation data and getting accuracy scores from the logits
 with tf.name_scope("VALIDATION"):
-	preds = tf.nn.softmax(logits, name="validation_softmax")
+	preds = tf.nn.softmax(logits=logits, name="validation_softmax")
 	correct_preds = tf.equal(tf.argmax(preds, 1), tf.argmax(Y, 1))
 	batchNumCorrect = tf.reduce_sum(tf.cast(correct_preds, tf.float32)) # need numpy.count_nonzero(boolarr) :(
 
