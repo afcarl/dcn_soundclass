@@ -17,7 +17,7 @@ FLAGS = None
 # ------------------------------------------------------
 # get any args provided on the command line
 parser = argparse.ArgumentParser()
-parser.add_argument('--oggdir', type=str, help='ESC-50 dataset directory',  default='~tflow/DATA-SETS/ESC-50') 
+parser.add_argument('--oggdir', type=str, help='ESC-50 dataset directory',  default='~/tflow/DATA-SETS/ESC-50') 
 parser.add_argument('--wavdir', type=str, help='ESC-50 dataset directory',  default='/tmp/esc50Wave') 
 parser.add_argument('--spectdir', type=str, help='ESC-50 dataset directory',  default='../data50/esc50spect') 
 
