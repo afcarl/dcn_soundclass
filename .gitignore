@@ -1,0 +1,10 @@
+*/._*
+.ipynb_checkpoints/
+checkpoints/*
+log_graph/*
+save/
+data*/validation-*
+data*/train-*
+data*/*/
+*validation-*
+*train-*
