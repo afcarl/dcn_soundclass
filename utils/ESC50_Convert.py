@@ -21,7 +21,8 @@ parser.add_argument('--oggdir', type=str, help='ESC-50 dataset directory',  defa
 parser.add_argument('--wavdir', type=str, help='ESC-50 dataset directory',  default='/tmp/esc50Wave') 
 parser.add_argument('--spectdir', type=str, help='ESC-50 dataset directory',  default='../data50/esc50spect') 
 
-
+FLAGS, unparsed = parser.parse_known_args()
+print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
 # Set some project parameters
 K_SR = 22050
@@ -40,8 +41,7 @@ K_WAVEDIR = FLAGS.wavdir  #(path must exist)
 K_SPECTDIR = FLAGS.spectdir 
 K_LABELFILE = K_SPECTDIR + '/../mylabels.txt'
 
-FLAGS, unparsed = parser.parse_known_args()
-print('\n FLAGS parsed :  {0}'.format(FLAGS))
+
 
 #---------------------------------------------------------
 
