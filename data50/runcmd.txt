@@ -1,0 +1,1 @@
+python spect2TFRecords.py --train_directory=./train --output_directory=./  --validation_directory=./validate --labels_file=mylabels.txt  --train_shards=8 --validation_shards=2 --num_threads=2

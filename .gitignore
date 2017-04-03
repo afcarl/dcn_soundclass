@@ -3,7 +3,9 @@
 checkpoints/*
 log_graph/*
 save/
-data50/
+data50/*/
+data50/validation-*
+data50/train-*
 data2/validation-*
 data2/train-*
 *validation-*

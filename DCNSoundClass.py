@@ -13,7 +13,7 @@ import argparse
 FLAGS = None
 # ------------------------------------------------------
 # get any args provided on the command line
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--outdir', type=str, help='output directory for logging',  default='.') 
 parser.add_argument('--numClasses', type=int, help='number of classes in data', choices=[2,50], default=2) #default for testing
 parser.add_argument('--checkpointing', help='True/False - for both saving and starting from checkpoints', default=False)
@@ -69,7 +69,7 @@ CHKPTBASE =  CHKPOINTDIR + '/model.ckpt'	# base name used for checkpoints
 LOGDIR = OUTDIR + '/log_graph'			#create folder manually
 #OUTPUTDIR = i_outdir
 
-NUM_THREADS = 16  #used for enqueueing TFRecord data 
+NUM_THREADS = 4  #used for enqueueing TFRecord data 
 #=============================================
 
 def getImage(fnames, nepochs=None) :

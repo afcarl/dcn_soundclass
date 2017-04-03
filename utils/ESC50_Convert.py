@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scipy
+import io
 
 #import matplotlib.pyplot as plt
 # https://github.com/librosa/librosa
@@ -63,9 +64,9 @@ def listDirectory(directory, fileExtList):
 def dirs2labelfile(parentdir, labelfile):
     """takes subdirectories of parentdir and writes them, one per line, to labelfile"""
     namelist = get_subdirs(parentdir)
-    with open(labelfile, mode='wt', encoding='utf-8') as myfile:
-        print('\n'.join(namelist))
-        myfile.write('\n'.join(namelist))
+    with io.open(labelfile, mode='wt', encoding='utf-8') as myfile:
+        print(u'\n'.join(namelist))
+        myfile.write(u'\n'.join(namelist))
 
  #------------
 def stereo2mono(data) :
@@ -207,7 +208,7 @@ def esc50Wav2Spect(topdir, outdir, dur, srate, fftSize, fftHop, showplt=False, d
             
 #---------------------------
 
-cont = raw_input('Continue with conversions? [y/n]')
+cont = raw_input('All your directories exist alread, and now - Continue with conversions? [y/n]')
 if (cont=='y'):
 	esc50Ogg2Wav(K_OGGDIR, K_WAVEDIR, K_DUR, K_SR)
 	esc50Wav2Spect(K_WAVEDIR, K_SPECTDIR, K_DUR, K_SR, K_FFTSIZE, K_HOP) 
