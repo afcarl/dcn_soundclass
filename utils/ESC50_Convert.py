@@ -33,11 +33,11 @@ K_FRAMEMULTIPLEOF = 4 # some programs like to have convinent dimensions for conv
                         # 1 means any number of frames will work
 
 # location of subdirectories of ogg files organized by category
-K_OGGDIR = '/Volumes/Bothways/ZCODE/TENSORFLOW/DATA/ESC-50/'
+K_OGGDIR = FLAGS.oggdir
 # location to write the wav files (converted from ogg)
-K_WAVEDIR = '/tmp/esc50Wave'  #(path must exist)
+K_WAVEDIR = FLAGS.wavdir  #(path must exist)
 # location to write the spectrogram files (converted from wave files)
-K_SPECTDIR = '../data50/esc50spect' 
+K_SPECTDIR = FLAGS.spectdir 
 K_LABELFILE = K_SPECTDIR + '/../mylabels.txt'
 
 FLAGS, unparsed = parser.parse_known_args()
