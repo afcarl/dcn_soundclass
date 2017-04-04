@@ -191,9 +191,9 @@ meanloss = tf.reduce_mean(summaryloss)
 # Step 6: define training op
 global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 #optimizer = tf.train.GradientDescentOptimizer(learning_rate = learning_rate).minimize(meanloss, global_step=global_step)
-#optimizer = tf.train.AdamOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
+optimizer = tf.train.AdamOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
 # NOTE: Must save global step here if you are doing checkpointing and expect to start from step where you left off.
-optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(meanloss, global_step=global_step)
+#optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
 
 
 #---------------------------------------------------------------
@@ -223,7 +223,7 @@ def validate(sess, printout=False) :
 				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch}) 
 				
 				total_correct_preds +=  batch_correct
-				#print (' >>>>  batch_correct is ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
+				#print (' >>>>  Batch " + str(i) + ' with batch_correct = ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
 
 				if printout:
 					print(' labels for batch:')
@@ -231,10 +231,10 @@ def validate(sess, printout=False) :
 					print(' predictions for batch')
 					print(predictions)
 					# print num correct for each batch
-					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
+					print(u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct))
 
 
-			print u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i, total_correct_preds)
+			print (u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i+1 , total_correct_preds))
 			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
 			vsummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples }) 
 			
@@ -313,7 +313,7 @@ def trainModel():
 				if (not batchcount%k_batchesPerLossReport) :
 					print('batchcount = ' + str(batchcount))
 					avgBatchLoss=batchcountloss/k_batchesPerLossReport
-					print u'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss)
+					print(u'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss))
 					batchcountloss=0
 
 					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch }) 
