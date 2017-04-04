@@ -54,6 +54,8 @@ FC_SIZE = 16
 
 # Derived parameters for convenience (do not change these)
 k_vbatchsize = validationSamples
+k_numVBatches = validationSamples/k_vbatchsize
+print(' For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize))
 #k_BATCHESPEREPOCH = trainingSamples/k_batchsize
 #k_TOTALBATCHES = n_epochs*k_BATCHESPEREPOCH
 
@@ -195,6 +197,13 @@ with tf.name_scope("VALIDATION"):
 
 #---------------------------------------------------------------
 # VALIDATE
+#--------------------------------------------------------------
+global numberval
+numberval = 0.0
+validationtensor = tf.Variable(0.0, name="validationtensor")
+wtf = tf.placeholder(tf.float32, ())
+summary_validation = tf.assign(validationtensor, wtf)
+
 # (altho this works, I think it is creating new ops each time it is called - what are the implications for memory and effective GPU use?)
 def validate(printout=False) : 
 	with tf.name_scope ( "summaries" ):
@@ -202,8 +211,9 @@ def validate(printout=False) :
 		total_correct_preds = 0
 
 		try:
-			for i in range(1):
+			for i in range(k_vbatchsize):
 				
+
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
 				loss_batch, predictions, batch_correct = sess.run([meanloss, preds, batchNumCorrect], feed_dict={X: X_batch, Y:Y_batch}) 
 				
@@ -215,14 +225,16 @@ def validate(printout=False) :
 					print(' predictions for batch')
 					print(predictions)
 					# print num correct for each batch
-					print '(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
+					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
 
 
 		except Exception, e:
 			print e
 
 		return total_correct_preds/validationSamples
-	
+
+
+
 #--------------------------------------------------------------
 #   Visualize with Tensorboard
 # -------------------------------------------------------------
@@ -237,6 +249,7 @@ mergedtrain = create_train_summaries()
 def create_validation_summaries ():
 		with tf.name_scope ( "validation_summaries" ):
 			tf.summary.scalar ( "validation_correct" , batchNumCorrect)
+			tf.summary.scalar ( "summary_validation", summary_validation)
 			return tf.summary.merge_all ()
 
 mergedvalidation = create_validation_summaries()
@@ -246,7 +259,9 @@ mergedvalidation = create_validation_summaries()
 # TRAIN
 
 def trainModel():
+
 	with tf.Session() as sess:
+		global numberval
 		writer = tf.summary.FileWriter(LOGDIR)  # for logging
 		saver = tf.train.Saver() # for checkpointing
 
@@ -293,20 +308,23 @@ def trainModel():
 				if (not batchcount%k_batchesPerLossReport) :
 					print('batchcount = ' + str(batchcount))
 					avgBatchLoss=batchcountloss/k_batchesPerLossReport
-					print 'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss)
+					print u'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss)
 					batchcountloss=0
 
 					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch }) 
 					writer.add_summary(tsummary, global_step=batchcount)
 
 
+					numberval += 1
+					print('TRAIN: numberval is ' + str(numberval))
 					X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-					vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch }) 
+					vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch, wtf : numberval }) 
 					writer.add_summary(vsummary, global_step=batchcount)
+
 
 					#Let's also check accuracy every batchcount:
 					#vaccuracy = validate(printout=True)
-					print '(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
+					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
 					#print '(Total) Accuracy {0}'.format(vaccuracy )
 
 				if not (batchcount  % k_checkpointPeriod) :
@@ -318,7 +336,7 @@ def trainModel():
 			#vaccuracy = validate(printout=True)
 			#print '(Validation) Accuracy {0}'.format(vaccuracy )
 
-			vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch }) 
+			vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch, wtf : numberval }) 
 			print '(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
 
 
@@ -342,4 +360,4 @@ def trainModel():
 #=============================================================================================
 # Do it
 trainModel()
-
+print('FINALLY: numberval is ' + str(numberval))
