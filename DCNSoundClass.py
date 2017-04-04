@@ -233,7 +233,8 @@ def validate(sess, printout=False) :
 					# print num correct for each batch
 					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
 
-			print u'(Validation EPOCH) num correct for EPOCH size of {0} is {1}'.format(validationSamples , total_correct_preds)
+
+			print u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i, total_correct_preds)
 			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
 			vsummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples }) 
 			
