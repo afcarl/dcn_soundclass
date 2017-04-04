@@ -53,9 +53,9 @@ L2_CHANNELS=64
 FC_SIZE = 16
 
 # Derived parameters for convenience (do not change these)
-k_vbatchsize = validationSamples
+k_vbatchsize = k_batchsize
 k_numVBatches = validationSamples/k_vbatchsize
-print(' For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize))
+print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize) + ' datasamples')
 #k_BATCHESPEREPOCH = trainingSamples/k_batchsize
 #k_TOTALBATCHES = n_epochs*k_BATCHESPEREPOCH
 
@@ -113,14 +113,20 @@ imageBatch, labelBatch = tf.train.shuffle_batch(
 # ---- same for the VALIDATION DATA
 vtarget, vdata = getImage(get_datafiles('data'+ str(k_numClasses), 'validation-')) # one "epoch" for validation
 
-vimageBatch, vlabelBatch = tf.train.shuffle_batch(
+#vimageBatch, vlabelBatch = tf.train.shuffle_batch(
+#    [vdata, vtarget], batch_size=k_vbatchsize,
+#    num_threads=NUM_THREADS,
+#    allow_smaller_final_batch=True, #want to finish an eposh even if datasize doesn't divide by batchsize
+#    enqueue_many=False, #IMPORTANT to get right, default=False - 
+#    capacity=1000,  #1000,
+#    min_after_dequeue=500) #500
+
+vimageBatch, vlabelBatch = tf.train.batch(
     [vdata, vtarget], batch_size=k_vbatchsize,
     num_threads=NUM_THREADS,
-    allow_smaller_final_batch=True, #want to finish an eposh even if datasize doesn't divide by batchsize
+    allow_smaller_final_batch=False, #want to finish an eposh even if datasize doesn't divide by batchsize
     enqueue_many=False, #IMPORTANT to get right, default=False - 
-    capacity=1000,  #1000,
-    min_after_dequeue=500) #500
-
+    capacity=1000)
 
 # Step 2: create placeholders for features (X) and labels (Y)
 # each lable is one hot vector.
@@ -189,35 +195,35 @@ global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step'
 # NOTE: Must save global step here if you are doing checkpointing and expect to start from step where you left off.
 optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(meanloss, global_step=global_step)
 
+
+#---------------------------------------------------------------
+# VALIDATE
+#--------------------------------------------------------------
 # The nodes are used for running the validation data and getting accuracy scores from the logits
 with tf.name_scope("VALIDATION"):
 	preds = tf.nn.softmax(logits=logits, name="validation_softmax")
 	correct_preds = tf.equal(tf.argmax(preds, 1), tf.argmax(Y, 1))
 	batchNumCorrect = tf.reduce_sum(tf.cast(correct_preds, tf.float32)) # need numpy.count_nonzero(boolarr) :(
 
-#---------------------------------------------------------------
-# VALIDATE
-#--------------------------------------------------------------
-global numberval
-numberval = 0.0
-validationtensor = tf.Variable(0.0, name="validationtensor")
-wtf = tf.placeholder(tf.float32, ())
-summary_validation = tf.assign(validationtensor, wtf)
+	# All this, just to feed a friggin float computed over several batches into a tensor we want to use for a summary
+	validationtensor = tf.Variable(0.0, trainable=False, name="validationtensor")
+	wtf = tf.placeholder(tf.float32, ())
+	summary_validation = tf.assign(validationtensor, wtf)
 
-# (altho this works, I think it is creating new ops each time it is called - what are the implications for memory and effective GPU use?)
-def validate(printout=False) : 
+# Run the validation set through the model and compute statistics to report as summaries
+def validate(sess, printout=False) : 
 	with tf.name_scope ( "summaries" ):
 		# test the model
 		total_correct_preds = 0
 
 		try:
-			for i in range(k_vbatchsize):
+			for i in range(k_numVBatches):
 				
-
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-				loss_batch, predictions, batch_correct = sess.run([meanloss, preds, batchNumCorrect], feed_dict={X: X_batch, Y:Y_batch}) 
+				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch}) 
 				
 				total_correct_preds +=  batch_correct
+				#print (' >>>>  batch_correct is ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
 
 				if printout:
 					print(' labels for batch:')
@@ -227,12 +233,15 @@ def validate(printout=False) :
 					# print num correct for each batch
 					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
 
+			print u'(Validation EPOCH) num correct for EPOCH size of {0} is {1}'.format(validationSamples , total_correct_preds)
+			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
+			vsummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples }) 
+			
 
 		except Exception, e:
 			print e
 
-		return total_correct_preds/validationSamples
-
+		return vsummary
 
 
 #--------------------------------------------------------------
@@ -248,20 +257,18 @@ mergedtrain = create_train_summaries()
 
 def create_validation_summaries ():
 		with tf.name_scope ( "validation_summaries" ):
-			tf.summary.scalar ( "validation_correct" , batchNumCorrect)
+			#tf.summary.scalar ( "validation_correct" , batchNumCorrect)
 			tf.summary.scalar ( "summary_validation", summary_validation)
 			return tf.summary.merge_all ()
 
 mergedvalidation = create_validation_summaries()
 
 # --------------------------------------------------------------
-#---------------------------------------------------------------
 # TRAIN
-
+#---------------------------------------------------------------
 def trainModel():
 
 	with tf.Session() as sess:
-		global numberval
 		writer = tf.summary.FileWriter(LOGDIR)  # for logging
 		saver = tf.train.Saver() # for checkpointing
 
@@ -301,9 +308,6 @@ def trainModel():
 				_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch })   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 				batchcountloss += loss_batch
 
-				#print(' labels for batch')
-				#print(Y_batch)
-
 				batchcount += 1
 				if (not batchcount%k_batchesPerLossReport) :
 					print('batchcount = ' + str(batchcount))
@@ -314,36 +318,25 @@ def trainModel():
 					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch }) 
 					writer.add_summary(tsummary, global_step=batchcount)
 
-
-					numberval += 1
-					print('TRAIN: numberval is ' + str(numberval))
-					X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-					vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch, wtf : numberval }) 
+					vsummary=validate(sess)
 					writer.add_summary(vsummary, global_step=batchcount)
 
-
-					#Let's also check accuracy every batchcount:
-					#vaccuracy = validate(printout=True)
-					print u'(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
-					#print '(Total) Accuracy {0}'.format(vaccuracy )
 
 				if not (batchcount  % k_checkpointPeriod) :
 					saver.save(sess, CHKPTBASE, global_step=batchcount)
 
-		except tf.errors.OutOfRangeError, e:
-			# So how?
+		except tf.errors.OutOfRangeError, e:  #done with training epochs. Validate once more before closing threads
+			# So how, finally?
 			print('ok, let validate ------------------------------')
-			#vaccuracy = validate(printout=True)
-			#print '(Validation) Accuracy {0}'.format(vaccuracy )
 
-			vsummary, batch_correct = sess.run([mergedvalidation,batchNumCorrect], feed_dict ={ X : X_batch , Y : Y_batch, wtf : numberval }) 
-			print '(Validation batch) num correct for batchsize of {0} is {1}'.format(k_vbatchsize , batch_correct)
+			vsummary=validate(sess)
+			writer.add_summary(vsummary, global_step=batchcount+1)
 
 
 			coord.request_stop(e)
 
-		except Exception, e:	#done with training epochs. Validate once more before closing threads
-			print('WTF')
+		except Exception, e:	
+			print('train: WTF')
 			print e
 
 		finally :
@@ -360,4 +353,3 @@ def trainModel():
 #=============================================================================================
 # Do it
 trainModel()
-print('FINALLY: numberval is ' + str(numberval))
