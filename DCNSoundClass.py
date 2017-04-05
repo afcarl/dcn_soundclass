@@ -191,9 +191,9 @@ meanloss = tf.reduce_mean(summaryloss)
 # Step 6: define training op
 global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 #optimizer = tf.train.GradientDescentOptimizer(learning_rate = learning_rate).minimize(meanloss, global_step=global_step)
-optimizer = tf.train.AdamOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
+#optimizer = tf.train.AdamOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
 # NOTE: Must save global step here if you are doing checkpointing and expect to start from step where you left off.
-#optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
+optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
 
 
 #---------------------------------------------------------------
