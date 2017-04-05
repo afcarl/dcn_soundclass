@@ -22,6 +22,7 @@ parser.add_argument('--checkpointPeriod', type=int, help='checkpoint every n bat
 parser.add_argument('--learning_rate', type=float, help='learning rate', default=.001) 
 parser.add_argument('--batchsize', type=int, help='number of data records per training batch', default=8) #default for testing
 parser.add_argument('--n_epochs', type=int, help='number of epochs to use for training', default=2) #default for testing
+parser.add_argument('--keepProb', type=float, help='keep probablity for dropout before 1st fully connected layer during training', default=1.0) #default for testing
 
 FLAGS, unparsed = parser.parse_known_args()
 print('\n FLAGS parsed :  {0}'.format(FLAGS))
@@ -50,7 +51,10 @@ k_ConvStrideCols=1
 
 L1_CHANNELS=32
 L2_CHANNELS=64
-FC_SIZE = 16
+FC_SIZE = 32
+
+k_keepProb=FLAGS.keepProb
+
 
 # Derived parameters for convenience (do not change these)
 k_vbatchsize = k_batchsize
@@ -167,7 +171,8 @@ if (k_width%4 or k_height%4):
 W_fc1 = tf.Variable(tf.truncated_normal([(k_width/4) * (k_height/4) * L2_CHANNELS, FC_SIZE], stddev=0.1), name="W_fc1")
 b_fc1 = tf.Variable(tf.constant(0.1, shape=[FC_SIZE]) , name="b_fc1")
 
-h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+keepProb=tf.placeholder(tf.float32, (), name= "keepProb")
+h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(h_pool2_flat, keepProb), W_fc1) + b_fc1)
 
 #Read out layer
 W_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="W_fc2")
@@ -220,7 +225,7 @@ def validate(sess, printout=False) :
 			for i in range(k_numVBatches):
 				
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch}) 
+				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.}) 
 				
 				total_correct_preds +=  batch_correct
 				#print (' >>>>  Batch " + str(i) + ' with batch_correct = ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
@@ -236,13 +241,13 @@ def validate(sess, printout=False) :
 
 			print (u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i+1 , total_correct_preds))
 			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
-			vsummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples }) 
+			msummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples, keepProb : 1.}) #using last batch to computer loss for summary
 			
 
 		except Exception, e:
 			print e
 
-		return vsummary
+		return msummary
 
 
 #--------------------------------------------------------------
@@ -306,7 +311,7 @@ def trainModel():
 					break
 
 				X_batch, Y_batch = sess.run([imageBatch, labelBatch])
-				_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch })   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
+				_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb })   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 				batchcountloss += loss_batch
 
 				batchcount += 1
@@ -316,7 +321,7 @@ def trainModel():
 					print(u'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss))
 					batchcountloss=0
 
-					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch }) 
+					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.0 }) #?? keep prob ??
 					writer.add_summary(tsummary, global_step=batchcount)
 
 					vsummary=validate(sess)
