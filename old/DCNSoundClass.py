@@ -24,8 +24,6 @@ parser.add_argument('--batchsize', type=int, help='number of data records per tr
 parser.add_argument('--n_epochs', type=int, help='number of epochs to use for training', default=2) #default for testing
 parser.add_argument('--keepProb', type=float, help='keep probablity for dropout before 1st fully connected layer during training', default=1.0) #default for testing
 
-parser.add_argument('--freqorientation', type=str, help='freq as height or as channels', choices=["height","channels"], default="channels") #default for testing
-
 parser.add_argument('--l1channels', type=int, help='Number of channels in the first convolutional layer', default=32) #default for testing
 parser.add_argument('--l2channels', type=int, help='Number of channels in the second convolutional layer', default=64) #default for testing
 parser.add_argument('--fcsize', type=int, help='Dimension of the final fully-connected layer', default=32) #default for testing
@@ -35,16 +33,7 @@ print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
 #HARD-CODED data-dependant parameters ------------------
 #dimensions of image (pixels)
-k_freqbins=256
-
-k_height=1
-k_inputChannnels=k_freqbins
-k_downsampledHeight = 1
-
-if FLAGS.freqorientation == "height" :
-	k_height=k_freqbins
-	k_inputChannnels=1
-	k_downsampledHeight = k_height/4
+k_height=256
 k_width=856
 
 k_numClasses=FLAGS.numClasses  #hard coded, depends upon data
@@ -59,19 +48,10 @@ n_epochs = FLAGS.n_epochs #6  #NOTE: we can load from checkpoint, but new run wi
 
 k_batchesPerLossReport= 4  #writes loss to the console every n batches
 
-K_ConvRows=1
-if FLAGS.freqorientation == "height" :
-	K_ConvRows=5
-	
+K_ConvRows=5
 K_ConvCols=5
 k_ConvStrideRows=1
 k_ConvStrideCols=1
-
-k_poolRows = 1
-k_poolStride = 1
-if FLAGS.freqorientation == "height" :
-	k_poolRows = 2
-	k_poolStride = 2 
 
 L1_CHANNELS=32
 L2_CHANNELS=64
@@ -109,7 +89,7 @@ def getImage(fnames, nepochs=None) :
     nepochs - An integer (optional). Just fed to tf.string_input_producer().  Reads through all data num_epochs times before generating an OutOfRange error. None means read forever.
     """
     label, image = spectreader.getImage(fnames, nepochs)
-    image=tf.reshape(image,[k_freqbins*k_width])
+    image=tf.reshape(image,[k_height*k_width])
     # re-define label as a "one-hot" vector 
     # it will be [0,1] or [1,0] here. 
     # This approach can easily be extended to more classes.
@@ -159,20 +139,20 @@ vimageBatch, vlabelBatch = tf.train.batch(
 # Step 2: create placeholders for features (X) and labels (Y)
 # each lable is one hot vector.
 # 'None' here allows us to fill the placeholders with different size batches (which we do with training and validation batches)
-X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
-x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels])  # reshape so we can run a 2d convolutional net
+X = tf.placeholder(tf.float32, [None,k_height*k_width], name= "X")
+x_image = tf.reshape(X, [-1,k_height,k_width,1])  # reshape so we can run a 2d convolutional net
 Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes, one-hot
 
 # Step 3: create weights and bias
 
 #Layer 1
 # 1 input channel, L1_CHANNELS output channels
-w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannnels, L1_CHANNELS], stddev=0.1), name="w1")
+w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, 1, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 
 h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1)
 # 2x2 max pooling
-h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME')
+h1pooled = tf.nn.max_pool(h1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 #Layer 2
 #L1_CHANNELS input channels, L2_CHANNELS output channels
@@ -182,17 +162,17 @@ b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 h2=tf.nn.relu(tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2)
 
 with tf.name_scope ( "Conv_layers_out" ):
-	h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name='h2_pooled')
-	h_pool2_flat = tf.reshape(h2pooled, [-1, (k_width/4) * k_downsampledHeight*L2_CHANNELS]) # to prepare it for multiplication by W_fc1
+	h2pooled = tf.nn.max_pool(h2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='h2_pooled')
+	h_pool2_flat = tf.reshape(h2pooled, [-1, (k_width/4) * (k_height/4)*L2_CHANNELS]) # to prepare it for multiplication by W_fc1
 
 #h2pooled is number of pixels / 2 / 2  (halved in size at each layer due to pooling)
 # check our dimensions are a multiple of 4
-if (k_width%4 or ((FLAGS.freqorientation == "height") and k_height%4 )):
+if (k_width%4 or k_height%4):
 	print ('Error: width and height must be a multiple of 4')
 	sys.exit(1)
 
 #now do a fully connected layer: every output connected to every input pixel of each channel
-W_fc1 = tf.Variable(tf.truncated_normal([(k_width/4) * k_downsampledHeight * L2_CHANNELS, FC_SIZE], stddev=0.1), name="W_fc1")
+W_fc1 = tf.Variable(tf.truncated_normal([(k_width/4) * (k_height/4) * L2_CHANNELS, FC_SIZE], stddev=0.1), name="W_fc1")
 b_fc1 = tf.Variable(tf.constant(0.1, shape=[FC_SIZE]) , name="b_fc1")
 
 keepProb=tf.placeholder(tf.float32, (), name= "keepProb")
