@@ -48,14 +48,14 @@ n_epochs = FLAGS.n_epochs #6  #NOTE: we can load from checkpoint, but new run wi
 
 k_batchesPerLossReport= 4  #writes loss to the console every n batches
 
-K_ConvRows=256
+K_ConvChans=256
 K_ConvCols=5
 k_ConvStrideRows=1
 k_ConvStrideCols=1
 
-L1_CHANNELS=32
-L2_CHANNELS=64
-FC_SIZE = 32
+L1_CHANNELS=FLAGS.l1channels
+L2_CHANNELS=FLAGS.l2channels
+FC_SIZE = FLAGS.fcsize
 
 k_keepProb=FLAGS.keepProb
 
@@ -147,7 +147,7 @@ Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes
 
 #Layer 1
 # 1 input channel, L1_CHANNELS output channels
-w1=tf.Variable(tf.truncated_normal([1, K_ConvCols, K_ConvRows, L1_CHANNELS], stddev=0.1), name="w1")
+w1=tf.Variable(tf.truncated_normal([1, K_ConvCols, K_ConvChans, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 
 h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, 1, k_ConvStrideCols, k_ConvStrideRows], padding='SAME') + b1)
