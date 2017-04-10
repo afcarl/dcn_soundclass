@@ -2,6 +2,7 @@
 .ipynb_checkpoints/
 logs*/
 checkpoints/*
+historicallogs/
 log_graph/*
 save/
 data50/*/
