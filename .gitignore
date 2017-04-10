@@ -1,5 +1,6 @@
 */._*
 .ipynb_checkpoints/
+logs*/
 checkpoints/*
 log_graph/*
 save/
@@ -15,3 +16,4 @@ data2/train-*
 .#*
 #*
 *~
+._*
