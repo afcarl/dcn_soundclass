@@ -3,7 +3,7 @@ import tensorflow as tf
 #=================================================================================================
 
 # Function to tell TensorFlow how to read a single image from TFRecord file(s)
-def getImage(filenames, nepochs):
+def getImage(filenames, nepochs=None, mtlclasses=0):
     # convert filenames to a queue for an input pipeline.
     print('getImage ' + str(filenames))
     filenameQ = tf.train.string_input_producer(filenames,num_epochs=nepochs)
@@ -24,6 +24,7 @@ def getImage(filenames, nepochs):
             'image/channels':  tf.FixedLenFeature([], tf.int64),            
             'image/class/label': tf.FixedLenFeature([],tf.int64),
             'image/class/text': tf.FixedLenFeature([], dtype=tf.string,default_value=''),
+            'image/class/label_2': tf.FixedLenFeature([], dtype=tf.int64, default_value=0),
             'image/format': tf.FixedLenFeature([], dtype=tf.string,default_value=''),
             'image/filename': tf.FixedLenFeature([], dtype=tf.string,default_value=''),
             'image/encoded': tf.FixedLenFeature([], dtype=tf.string, default_value='')
@@ -35,6 +36,9 @@ def getImage(filenames, nepochs):
     label = features['image/class/label']
     image_buffer = features['image/encoded']
 
+    if mtlclasses : 
+        mtlabel = features['image/class/label_2']
+
     # Decode the jpeg
     with tf.name_scope('decode_jpeg',[image_buffer], None):
         # decode
@@ -44,5 +48,7 @@ def getImage(filenames, nepochs):
         image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
 
-
-    return label, image
+    if mtlclasses : 
+        return label, image, mtlabel
+    else :
+        return label, image
