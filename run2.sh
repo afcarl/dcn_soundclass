@@ -31,7 +31,7 @@ do
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 0 --checkpointPeriod 1000  '
             runcmd+='--numClasses 2 --batchsize 20 --n_epochs 2 --learning_rate ${learningrate}  --keepProb .5 '
             runcmd+='--l1channels 64 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  '
-            runcmd+='adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers}'
+            runcmd+='--adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers}'
 			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch
         	eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
         done
