@@ -1,6 +1,5 @@
 """
 
---------------------------------------------------------------------------
 """
 import tensorflow as tf
 import numpy as np
@@ -31,6 +30,10 @@ parser.add_argument('--numconvlayers', type=int, help='number of convolutional l
 parser.add_argument('--l1channels', type=int, help='Number of channels in the first convolutional layer', default=32) #default for testing
 parser.add_argument('--l2channels', type=int, help='Number of channels in the second convolutional layer (ignored if numconvlayers is 1)', default=64) #default for testing
 parser.add_argument('--fcsize', type=int, help='Dimension of the final fully-connected layer', default=32) #default for testing
+
+parser.add_argument('--optimizer', type=str, help='optimizer', choices=["adam","gd"], default="gd") #default for testing
+parser.add_argument('--adamepsilon', type=float, help='epsilon param for adam optimizer', default=.1) 
+
 
 FLAGS, unparsed = parser.parse_known_args()
 print('\n FLAGS parsed :  {0}'.format(FLAGS))
@@ -96,6 +99,9 @@ if FLAGS.freqorientation == "height" :
 
 
 k_keepProb=FLAGS.keepProb
+
+k_OPTIMIZER=FLAGS.optimizer
+k_adamepsilon = FLAGS.adamepsilon
 
 # ------------------------------------------------------
 # Derived parameters for convenience (do not change these)
@@ -241,12 +247,14 @@ summaryloss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
 meanloss = tf.reduce_mean(summaryloss)
 
 # Step 6: define training op
-global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
-#optimizer = tf.train.GradientDescentOptimizer(learning_rate = learning_rate).minimize(meanloss, global_step=global_step)
-#optimizer = tf.train.AdamOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
 # NOTE: Must save global step here if you are doing checkpointing and expect to start from step where you left off.
-optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(meanloss, global_step=global_step)
-
+global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
+optimizer=None
+if (k_OPTIMIZER == "adam") :
+	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss, global_step=global_step)
+if (k_OPTIMIZER == "gd") :
+	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss, global_step=global_step)
+assert(optimizer)
 
 #---------------------------------------------------------------
 # VALIDATE
@@ -384,7 +392,7 @@ def trainModel():
 
 		except tf.errors.OutOfRangeError, e:  #done with training epochs. Validate once more before closing threads
 			# So how, finally?
-			print('ok, let validate ------------------------------')
+			print('ok, let\'s validate now that we\'ve run ' + str(batchcount) + 'batches  ------------------------------')
 
 			vsummary=validate(sess)
 			writer.add_summary(vsummary, global_step=batchcount+1)
@@ -439,6 +447,12 @@ print('K_ConvRows: ' + str(K_ConvRows)
 	+ ',   ' + 'k_ConvStrideCols: ' + str(k_ConvStrideCols)
 	+ ',   ' + 'k_poolRows: ' + str(k_poolRows)
 	+ ',   ' + 'k_poolStride : ' + str(k_poolStride ))
+if (k_OPTIMIZER == "adam") : 
+	print('k_OPTIMIZER: ' + str(k_OPTIMIZER)
+	+ ',   ' + 'k_adamepsilon: ' + str(k_adamepsilon))
+else :
+	print('k_OPTIMIZER: ' + str(k_OPTIMIZER))
+
 #OUTDIR
 print('OUTDIR: ' + str(OUTDIR))
 print('CHECKPOINTING: ' + str(CHECKPOINTING))

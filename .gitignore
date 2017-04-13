@@ -1,6 +1,7 @@
 */._*
 .ipynb_checkpoints/
 logs*/
+scratch/
 checkpoints/*
 historicallogs/
 log_graph/*
