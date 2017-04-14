@@ -34,6 +34,8 @@ parser.add_argument('--fcsize', type=int, help='Dimension of the final fully-con
 parser.add_argument('--optimizer', type=str, help='optimizer', choices=["adam","gd"], default="gd") #default for testing
 parser.add_argument('--adamepsilon', type=float, help='epsilon param for adam optimizer', default=.1) 
 
+parser.add_argument('--mtlnumclasses', type=int, help='if nonzero, train using secondary classes (which must be stored in TFRecord files', default=0)
+
 
 FLAGS, unparsed = parser.parse_known_args()
 print('\n FLAGS parsed :  {0}'.format(FLAGS))
@@ -55,6 +57,9 @@ k_width=856
 k_numClasses=FLAGS.numClasses  #determines wether to read mini data set in data2 or full dataset in data50
 validationSamples=8*k_numClasses
 trainingSamples=32*k_numClasses
+
+
+k_mtlnumclasses=FLAGS.mtlnumclasses #only matters if K_MTK is not 0
 
 # ------------------------------------------------------
 # Define paramaters for the training
@@ -125,22 +130,29 @@ LOGDIR = OUTDIR + '/log_graph'			#create folder manually
 
 NUM_THREADS = 4  #used for enqueueing TFRecord data 
 #=============================================
-parameters=[]
-#=============================================
 
-def getImage(fnames, nepochs=None) :
+def getImage(fnames, nepochs=None, mtlclasses=0) :
     """ Reads data from the prepaired *list* files in fnames of TFRecords, does some preprocessing 
     params:
     fnames - list of filenames to read data from
     nepochs - An integer (optional). Just fed to tf.string_input_producer().  Reads through all data num_epochs times before generating an OutOfRange error. None means read forever.
     """
-    label, image = spectreader.getImage(fnames, nepochs)
+    if mtlclasses : 
+    	label, image, mtlabel = spectreader.getImage(fnames, nepochs, mtlclasses)
+    else : 
+    	label, image = spectreader.getImage(fnames, nepochs)
+
     image=tf.reshape(image,[k_freqbins*k_width])
     # re-define label as a "one-hot" vector 
     # it will be [0,1] or [1,0] here. 
     # This approach can easily be extended to more classes.
     label=tf.stack(tf.one_hot(label-1, k_numClasses))
-    return label, image
+
+    if mtlclasses :
+    	mtlabel=tf.stack(tf.one_hot(mtlabel-1, mtlclasses))
+    	return label, image, mtlabel
+    else :
+    	return label, image
 
 def get_datafiles(a_dir, startswith):
     """ Returns a list of files in a_dir that start with the string startswith.
@@ -154,17 +166,28 @@ def get_datafiles(a_dir, startswith):
 
 # getImage reads data for enqueueing shufflebatch, shufflebatch manages it's own dequeing 
 # ---- First set up the graph for the TRAINING DATA
-target, data = getImage(get_datafiles('data'+ str(k_numClasses), 'train-'), n_epochs)
+if k_mtlnumclasses : 
+	target, data, mtltargets = getImage(get_datafiles('data'+ str(k_numClasses), 'train-'), nepochs=n_epochs, mtlclasses=k_mtlnumclasses)
+	imageBatch, labelBatch, mtltargetBatch = tf.train.shuffle_batch(
+	    [data, target, mtltargets], batch_size=k_batchsize,
+	    num_threads=NUM_THREADS,
+	    allow_smaller_final_batch=True, #want to finish an eposh even if datasize doesn't divide by batchsize
+	    enqueue_many=False, #IMPORTANT to get right, default=False - 
+	    capacity=1000,  #1000,
+	    min_after_dequeue=500) #500
+else :
+	target, data  = getImage(get_datafiles('data'+ str(k_numClasses), 'train-'), n_epochs)
+	imageBatch, labelBatch = tf.train.shuffle_batch(
+	    [data, target], batch_size=k_batchsize,
+	    num_threads=NUM_THREADS,
+	    allow_smaller_final_batch=True, #want to finish an eposh even if datasize doesn't divide by batchsize
+	    enqueue_many=False, #IMPORTANT to get right, default=False - 
+	    capacity=1000,  #1000,
+	    min_after_dequeue=500) #500
 
-imageBatch, labelBatch = tf.train.shuffle_batch(
-    [data, target], batch_size=k_batchsize,
-    num_threads=NUM_THREADS,
-    allow_smaller_final_batch=True, #want to finish an eposh even if datasize doesn't divide by batchsize
-    enqueue_many=False, #IMPORTANT to get right, default=False - 
-    capacity=1000,  #1000,
-    min_after_dequeue=500) #500
 
 # ---- same for the VALIDATION DATA
+# no need for mtl labels for validation
 vtarget, vdata = getImage(get_datafiles('data'+ str(k_numClasses), 'validation-')) # one "epoch" for validation
 
 #vimageBatch, vlabelBatch = tf.train.shuffle_batch(
@@ -188,6 +211,7 @@ vimageBatch, vlabelBatch = tf.train.batch(
 X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
 x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels])  # reshape so we can run a 2d convolutional net
 Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes, one-hot
+MTLY = tf.placeholder(tf.float32, [None,k_mtlnumclasses], name= "MTLY")  #labeled classes, one-hot 
 
 # Step 3: create weights and bias
 
@@ -231,6 +255,11 @@ h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) 
 W_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="W_fc2")
 b_fc2 = tf.Variable(tf.constant(0.1, shape=[k_numClasses]), name="b_fc2")
 
+if k_mtlnumclasses : 
+	#MTL Read out layer - This is the only part of the net that is different for the secondary classes
+	mtlW_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_mtlnumclasses], stddev=0.1), name="mtlW_fc2")
+	mtlb_fc2 = tf.Variable(tf.constant(0.1, shape=[k_mtlnumclasses]), name="mtlb_fc2")
+
 
 # Step 4: build model
 # the model that returns the logits.
@@ -239,12 +268,29 @@ b_fc2 = tf.Variable(tf.constant(0.1, shape=[k_numClasses]), name="b_fc2")
 # DO NOT DO SOFTMAX HERE
 #could do a dropout here on h
 logits = tf.matmul(h_fc1, W_fc2) + b_fc2
-
+if k_mtlnumclasses : 
+	mtllogits = tf.matmul(h_fc1, mtlW_fc2) + mtlb_fc2
 
 # Step 5: define loss function
 # use cross entropy loss of the real labels with the softmax of logits
-summaryloss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
-meanloss = tf.reduce_mean(summaryloss)
+summaryloss_primary = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
+meanloss_primary = tf.reduce_mean(summaryloss_primary)
+
+
+if k_mtlnumclasses : 
+	summaryloss_mtl = tf.nn.softmax_cross_entropy_with_logits(logits=mtllogits, labels=MTLY) 
+	meanloss_mtl = tf.reduce_mean(summaryloss_mtl)
+	meanloss=meanloss_primary+meanloss_mtl
+else : 
+	meanloss=meanloss_primary
+
+
+
+#if k_mtlnumclasses :
+#	meanloss = tf.assign(meanloss, meanloss_primary + meanloss_mtl) #training thus depends on MTLYY in the feeddict if k_mtlnumclasses  != 0
+#else :
+#	meanloss = tf.assign(meanloss, meanloss_primary)
+
 
 # Step 6: define training op
 # NOTE: Must save global step here if you are doing checkpointing and expect to start from step where you left off.
@@ -256,6 +302,14 @@ if (k_OPTIMIZER == "gd") :
 	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss, global_step=global_step)
 assert(optimizer)
 
+# FROM BLOG POST ----- NOT NECESSARY!
+#if k_mtlnumclasses :
+#	if (k_OPTIMIZER == "adam") :
+#		Yprimary_op = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss_primary, global_step=global_step)	              
+#		Ymtl_op = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss_mtl, global_step=global_step)
+#	else :
+#		Yprimary_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss_primary, global_step=global_step)	              
+#		Ymtl_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss_mtl, global_step=global_step)
 #---------------------------------------------------------------
 # VALIDATE
 #--------------------------------------------------------------
@@ -280,7 +334,6 @@ def validate(sess, printout=False) :
 			for i in range(k_numVBatches):
 				
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-
 				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.}) 
 				
 				total_correct_preds +=  batch_correct
@@ -297,6 +350,7 @@ def validate(sess, printout=False) :
 
 			print (u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i+1 , total_correct_preds))
 			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
+
 			msummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples, keepProb : 1.}) #using last batch to computer loss for summary
 			
 
@@ -312,7 +366,7 @@ def validate(sess, printout=False) :
 
 def create_train_summaries ():
 		with tf.name_scope ( "train_summaries" ):
-			tf.summary.scalar ( "mean_loss" , meanloss)
+			tf.summary.scalar ( "mean_loss" , meanloss_primary)
 			return tf.summary.merge_all ()
 
 mergedtrain = create_train_summaries()
@@ -366,10 +420,15 @@ def trainModel():
 				if coord.should_stop():
 					break
 
-				X_batch, Y_batch = sess.run([imageBatch, labelBatch])
 				
+				
+				if k_mtlnumclasses :
+					X_batch, Y_batch, MTLY_batch = sess.run([imageBatch, labelBatch, mtltargetBatch])
+					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, MTLY : MTLY_batch})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it? 
+				else :
+					X_batch, Y_batch = sess.run([imageBatch, labelBatch])
+					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 
-				_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb })   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 				batchcountloss += loss_batch
 
 
@@ -452,6 +511,7 @@ if (k_OPTIMIZER == "adam") :
 	+ ',   ' + 'k_adamepsilon: ' + str(k_adamepsilon))
 else :
 	print('k_OPTIMIZER: ' + str(k_OPTIMIZER))
+print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 
 #OUTDIR
 print('OUTDIR: ' + str(OUTDIR))
