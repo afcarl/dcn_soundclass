@@ -1,6 +1,6 @@
-#!/bin/bash                                                                                                                                                                
-# To store logs and see both stderr and stdout on the screen: 
-#    nohup ./run50.sh >>logs/multilog.txt 2>&1 &     
+#!/bin/bash                                                                                                                                                                      
+# To store logs and see both stderr and stdout on the screen:                                                                                                                    
+#    nohup ./run50.sh >>logs/multilog.txt 2>&1 &                                                                                                                                 
 # Individual logs will also still get stored in their respective directories                                                                                                    
 source activate tflow2
 DATE=`date +%Y.%m.%d`
@@ -9,34 +9,44 @@ mkdir $maindir
 
 epsilon=1.0
 optimizer=adam
+learningrate=.01
 orientation=channels
+layers=2
+mtl=8
 
-learningrateArray=(.01)
-mtlArray=(0 2)
-layersArray=(2 1)
-for  learningrate in ${learningrateArray[@]}
+l1channelsArray=(16 128)
+l2channelsArray=(16 64)
+fcsizeArray=(32)
+
+for l1channels in ${l1channelsArray[@]}
 do
-    for mtl in ${mtlArray[@]}
+    for l2channels in ${l2channelsArray[@]}
     do
-        for layers in ${layersArray[@]}
+        for fcsize in ${fcsizeArray[@]}
         do
-            #make output dir for paramter settings                                                                                                                         
+            #make output dir for paramter settings                                                                                                                               
             echo " -------       new batch run     --------"
-            OUTDIR="$maindir/lr_${learningrate}.mtl_${mtl}.layers_${layers}"
+            OUTDIR="$maindir/l1r_${l1channels}.l2_${l2channels}.fc_${fcsize}"
             mkdir $OUTDIR
             echo "outdir is " $OUTDIR
 
-            #make subdirs for logging and checkpoints                                                                                                                      
+            #keep a copy of this run file                                                                                                                                        
+            me=`basename "$0"`
+            cp $me $OUTDIR
+
+            #make subdirs for logging and checkpoints                                                                                                                            
             mkdir "$OUTDIR/log_graph"
             mkdir "$OUTDIR/checkpoints"
-            # wrap python call in a string so we can do our fancy redirecting below
+            mkdir "$OUTDIR/stderr"
+            # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 1000  '
             runcmd+='--numClasses 50 --batchsize 20 --n_epochs 200 --learning_rate ${learningrate}  '
-            runcmd+='--keepProb .5 --l1channels 64 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  '
+            runcmd+='--keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+='--numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
-			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch
-        	eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
+                        # direct stdout and sterr from each run into their proper directories, but tww so we can still watch                                                     
+                eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR/stderr/stderr.log >&2)
         done
     done
 done
+
 
