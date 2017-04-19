@@ -1,3 +1,3 @@
 #!/bin/bash  
-rm ./log_graph/*
-rm ./checkpoints/*
+rm -r logs.2017.04.18
+rm ./scratch/multilog.txt

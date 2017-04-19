@@ -220,7 +220,7 @@ MTLY = tf.placeholder(tf.float32, [None,k_mtlnumclasses], name= "MTLY")  #labele
 w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannnels, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 
-h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1)
+h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1, name="h1")
 # 2x2 max pooling
 h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME')
 
@@ -230,7 +230,7 @@ if K_NUMCONVLAYERS == 2 :
 	w2=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="w2")
 	b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 
-	h2=tf.nn.relu(tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2)
+	h2=tf.nn.relu(tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2, name="h2")
 
 	with tf.name_scope ( "Conv_layers_out" ):
 		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name='h2_pooled')
@@ -249,7 +249,7 @@ W_fc1 = tf.Variable(tf.truncated_normal([k_downsampledWidth * k_downsampledHeigh
 b_fc1 = tf.Variable(tf.constant(0.1, shape=[FC_SIZE]) , name="b_fc1")
 
 keepProb=tf.placeholder(tf.float32, (), name= "keepProb")
-h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) + b_fc1)
+h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) + b_fc1, name="h_fc1")
 
 #Read out layer
 W_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="W_fc2")
@@ -267,7 +267,12 @@ if k_mtlnumclasses :
 # to get the probability distribution of possible label of the image
 # DO NOT DO SOFTMAX HERE
 #could do a dropout here on h
-logits = tf.matmul(h_fc1, W_fc2) + b_fc2
+logits_ = tf.matmul(h_fc1, W_fc2) + b_fc2
+logits = tf.add(logits_ , b_fc2, name="logits")
+
+
+
+
 if k_mtlnumclasses : 
 	mtllogits = tf.matmul(h_fc1, mtlW_fc2) + mtlb_fc2
 
@@ -302,27 +307,30 @@ if (k_OPTIMIZER == "gd") :
 	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss, global_step=global_step)
 assert(optimizer)
 
-# FROM BLOG POST ----- NOT NECESSARY!
-#if k_mtlnumclasses :
-#	if (k_OPTIMIZER == "adam") :
-#		Yprimary_op = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss_primary, global_step=global_step)	              
-#		Ymtl_op = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss_mtl, global_step=global_step)
-#	else :
-#		Yprimary_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss_primary, global_step=global_step)	              
-#		Ymtl_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss_mtl, global_step=global_step)
 #---------------------------------------------------------------
 # VALIDATE
 #--------------------------------------------------------------
 # The nodes are used for running the validation data and getting accuracy scores from the logits
 with tf.name_scope("VALIDATION"):
-	preds = tf.nn.softmax(logits=logits, name="validation_softmax")
-	correct_preds = tf.equal(tf.argmax(preds, 1), tf.argmax(Y, 1))
+	softmax_preds = tf.nn.softmax(logits=logits, name="softmax_preds")
+	correct_preds = tf.equal(tf.argmax(softmax_preds, 1), tf.argmax(Y, 1))
 	batchNumCorrect = tf.reduce_sum(tf.cast(correct_preds, tf.float32)) # need numpy.count_nonzero(boolarr) :(
 
 	# All this, just to feed a friggin float computed over several batches into a tensor we want to use for a summary
 	validationtensor = tf.Variable(0.0, trainable=False, name="validationtensor")
 	wtf = tf.placeholder(tf.float32, ())
 	summary_validation = tf.assign(validationtensor, wtf)
+
+#-----------------------------------------------------------------------------------
+# These will be available to other programs that want to use this trained net.
+tf.GraphKeys.USEFUL = 'useful'
+tf.add_to_collection(tf.GraphKeys.USEFUL, X)    #input place holder
+tf.add_to_collection(tf.GraphKeys.USEFUL, keepProb) #place holder
+tf.add_to_collection(tf.GraphKeys.USEFUL, softmax_preds)
+tf.add_to_collection(tf.GraphKeys.USEFUL, h1)
+tf.add_to_collection(tf.GraphKeys.USEFUL, h2)
+#-----------------------------------------------------------------------------------
+
 
 # Run the validation set through the model and compute statistics to report as summaries
 def validate(sess, printout=False) : 
@@ -334,7 +342,7 @@ def validate(sess, printout=False) :
 			for i in range(k_numVBatches):
 				
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-				batch_correct, predictions = sess.run([batchNumCorrect, preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.}) 
+				batch_correct, predictions = sess.run([batchNumCorrect, softmax_preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.}) 
 				
 				total_correct_preds +=  batch_correct
 				#print (' >>>>  Batch " + str(i) + ' with batch_correct = ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
@@ -472,6 +480,10 @@ def trainModel():
 		totalruntime = time.time() - start_time
 		print 'Total training time: {0} seconds'.format(totalruntime)
 		print(' Finished!') # should be around 0.35 after 25 epochs
+
+		print(' now save meta model')
+		meta_graph_def = tf.train.export_meta_graph(filename=OUTDIR + '/my-model.meta')
+
 		print(' ===============================================================') 
 
 #=============================================================================================
