@@ -209,20 +209,25 @@ vimageBatch, vlabelBatch = tf.train.batch(
 # each lable is one hot vector.
 # 'None' here allows us to fill the placeholders with different size batches (which we do with training and validation batches)
 X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
+#X = tf.Variable(tf.float32, [None,k_freqbins*k_width], validate_shape=False, name= "X")
 x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels])  # reshape so we can run a 2d convolutional net
+
 Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes, one-hot
 MTLY = tf.placeholder(tf.float32, [None,k_mtlnumclasses], name= "MTLY")  #labeled classes, one-hot 
 
 # Step 3: create weights and bias
+trainable=[]
 
 #Layer 1
 # 1 input channel, L1_CHANNELS output channels
+
 w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannnels, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
-
 h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1, name="h1")
 # 2x2 max pooling
 h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME')
+
+trainable.extend([w1, b1]) 
 
 if K_NUMCONVLAYERS == 2 :
 	#Layer 2
@@ -231,6 +236,8 @@ if K_NUMCONVLAYERS == 2 :
 	b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 
 	h2=tf.nn.relu(tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2, name="h2")
+
+	trainable.extend([w2, b2]) 
 
 	with tf.name_scope ( "Conv_layers_out" ):
 		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name='h2_pooled')
@@ -255,11 +262,14 @@ h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) 
 W_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="W_fc2")
 b_fc2 = tf.Variable(tf.constant(0.1, shape=[k_numClasses]), name="b_fc2")
 
+trainable.extend([W_fc1, b_fc1, W_fc2, b_fc2])
+
 if k_mtlnumclasses : 
 	#MTL Read out layer - This is the only part of the net that is different for the secondary classes
 	mtlW_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_mtlnumclasses], stddev=0.1), name="mtlW_fc2")
 	mtlb_fc2 = tf.Variable(tf.constant(0.1, shape=[k_mtlnumclasses]), name="mtlb_fc2")
 
+	trainable.extend([mtlW_fc2, mtlb_fc2])
 
 # Step 4: build model
 # the model that returns the logits.
@@ -267,7 +277,7 @@ if k_mtlnumclasses :
 # to get the probability distribution of possible label of the image
 # DO NOT DO SOFTMAX HERE
 #could do a dropout here on h
-logits_ = tf.matmul(h_fc1, W_fc2) + b_fc2
+logits_ = tf.matmul(h_fc1, W_fc2)
 logits = tf.add(logits_ , b_fc2, name="logits")
 
 
@@ -302,9 +312,9 @@ else :
 global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 optimizer=None
 if (k_OPTIMIZER == "adam") :
-	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss, global_step=global_step)
+	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=k_adamepsilon ).minimize(meanloss, var_list=trainable, global_step=global_step)
 if (k_OPTIMIZER == "gd") :
-	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss, global_step=global_step)
+	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(meanloss, var_list=trainable, global_step=global_step)
 assert(optimizer)
 
 #---------------------------------------------------------------
@@ -327,8 +337,18 @@ tf.GraphKeys.USEFUL = 'useful'
 tf.add_to_collection(tf.GraphKeys.USEFUL, X)    #input place holder
 tf.add_to_collection(tf.GraphKeys.USEFUL, keepProb) #place holder
 tf.add_to_collection(tf.GraphKeys.USEFUL, softmax_preds)
-tf.add_to_collection(tf.GraphKeys.USEFUL, h1)
-tf.add_to_collection(tf.GraphKeys.USEFUL, h2)
+tf.add_to_collection(tf.GraphKeys.USEFUL, w1)
+tf.add_to_collection(tf.GraphKeys.USEFUL, b1)
+tf.add_to_collection(tf.GraphKeys.USEFUL, w2)
+tf.add_to_collection(tf.GraphKeys.USEFUL, b2)
+
+tf.add_to_collection(tf.GraphKeys.USEFUL, W_fc1)
+tf.add_to_collection(tf.GraphKeys.USEFUL, b_fc1)
+tf.add_to_collection(tf.GraphKeys.USEFUL, W_fc2)
+tf.add_to_collection(tf.GraphKeys.USEFUL, b_fc2)
+
+
+
 #-----------------------------------------------------------------------------------
 
 

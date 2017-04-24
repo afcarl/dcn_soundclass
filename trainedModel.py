@@ -12,31 +12,57 @@
 import tensorflow as tf
 import numpy as np
 
+#global variables 
+g_st_saver=None
+g_chkptdir=None
+g_trainedgraph=None
+
+
 k_freqbins=256
 k_width=856
 
-k_verbose=0
+VERBOSE=1
+
+
+#-------------------------------------------------------------
 
 def load(meta_model_file, restore_chkptDir) :
 
-	st_saver = tf.train.import_meta_graph(meta_model_file)
+	global g_st_saver
+	global g_chkptdir
+	global g_trainedgraph
+
+	g_st_saver = tf.train.import_meta_graph(meta_model_file)
 	# Access the graph
-	st_graph = tf.get_default_graph()
+	g_trainedgraph = tf.get_default_graph()
 
 	with tf.Session() as sess:
-		# Do i also have to restore to get the varaibale value?? 
-		st_saver.restore(sess, tf.train.latest_checkpoint(restore_chkptDir))
-		if k_verbose :
-			print ('...GLOBAL_VARIABLES :')  #probalby have to restore from checkpoint first
-			all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-			for v in all_vars:
-				v_ = sess.run(v)
-				print(v_)
-			print ('...WEIGHTS :')  #probalby have to restore from checkpoint first
-			all_vars = tf.get_collection(tf.GraphKeys.WEIGHTS)
-			for v in all_vars:
-				v_ = sess.run(v)
-				print(v_)
+		g_chkptdir=restore_chkptDir # save in global for use during initialize
+		#g_st_saver.restore(sess, tf.train.latest_checkpoint(restore_chkptDir))
 
-	return st_graph, st_saver
 
+
+	return g_trainedgraph, g_st_saver
+
+def initialize_variables(sess) :
+	g_st_saver.restore(sess, tf.train.latest_checkpoint(g_chkptdir))
+
+	tf.GraphKeys.USEFUL = 'useful'
+	var_list = tf.get_collection(tf.GraphKeys.USEFUL)
+
+	#print('var_list[3] is ' + str(var_list[3]))
+	
+
+	#JUST WANTED TO TEST THIS TO COMPARE TO STYLE MODEL CODE
+	# Now get the values of the trained graph in to the new style graph
+	#sess.run((g_trainedgraph.get_tensor_by_name("w1:0")).assign(var_list[3]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("b1:0").assign(var_list[4]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("w2:0").assign(var_list[5]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("b2:0").assign(var_list[6]))
+
+	#sess.run(g_trainedgraph.get_tensor_by_name("W_fc1:0").assign(var_list[7]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("b_fc1:0").assign(var_list[8]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("W_fc2:0").assign(var_list[9]))
+	#sess.run(g_trainedgraph.get_tensor_by_name("b_fc2:0").assign(var_list[10]))
+
+	
