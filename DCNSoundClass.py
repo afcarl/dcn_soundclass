@@ -72,7 +72,7 @@ n_epochs = FLAGS.n_epochs #6  #NOTE: we can load from checkpoint, but new run wi
 K_NUMCONVLAYERS = FLAGS.numconvlayers
 
 L1_CHANNELS=FLAGS.l1channels
-L2_CHANNELS=FLAGS.l1channels
+L2_CHANNELS=FLAGS.l2channels
 FC_SIZE = FLAGS.fcsize
 
 k_downsampledHeight = 1			# default for freqs as channels
