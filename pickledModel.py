@@ -78,7 +78,6 @@ def save_image(image, fname, scaleinfo=None):
 	else :
 	    info[270] = scaleinfo
 
-
 	#scipy.misc.imsave(path, image)
 
 	bwarray=np.asarray(image)/255.

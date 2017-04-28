@@ -33,7 +33,7 @@ do
             mkdir "$OUTDIR/checkpoints"
             # wrap python call in a string so we can do our fancy redirecting below
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 10  '
-            runcmd+='--numClasses 2 --batchsize 20 --n_epochs 50 --learning_rate ${learningrate}  --keepProb .5 '
+            runcmd+='--numClasses 2 --batchsize 20 --n_epochs 10 --learning_rate ${learningrate}  --keepProb .5 '
             runcmd+='--l1channels 64 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  '
             runcmd+='--adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'
 			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch

@@ -1,6 +1,6 @@
 """
 eg 
-python testModel.py  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/my-model.meta  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/checkpoints/
+python testModel.py  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/state.pickle  
 
 """
 import tensorflow as tf
@@ -36,7 +36,12 @@ print(' here we go ........')
 def soundfileBatch(slist) :
 	#looks weird, and it might be possible to simplify, but this is what it takes to get it into the right shape.
 	# This is the shape that the training network passes to the optimizer after it's load and reshaping of an image.
-	return [np.reshape(np.transpose(np.array(Image.open(name).point(lambda i: i*255)).flatten()), [1,k_height,k_width,k_inputChannnels]) for name in slist ]
+
+	#return [np.reshape(np.transpose(np.array(Image.open(name).point(lambda i: i*255)).flatten()), [1,k_height,k_width,k_inputChannnels]) for name in slist ]
+	#return [np.reshape(np.array(Image.open(name).point(lambda i: i*255)).flatten(), [1,k_height,k_width,k_inputChannnels]) for name in slist ]
+
+	#shape like batch, permuted freqbins to channels - just as x_image is fed to the training network
+	return( [np.transpose(np.reshape(np.array(Image.open(name).point(lambda i: i*255)), [1,k_freqbins,k_width,1]), [0,3,2,1]) for name in slist ])
 
 #just test the validation set 
 #Flipping and scaling seem to have almost no effect on the clasification accuracy
@@ -83,6 +88,7 @@ with tf.Session() as sess:
 		for v in ["s_h1:0"] :
 			#im = np.reshape(np.transpose(rimages[6]), [1,k_width*k_freqbins ])
 			im=rimages[6]
+			print('assigning input variable an image with shape  ' + str(im.shape))
 			sess.run(styg["X"].assign(im)) #transpose to make freqbins channels
 			print(tf.get_default_graph().get_tensor_by_name(v))
 			print(sess.run(tf.get_default_graph().get_tensor_by_name(v)))
@@ -99,4 +105,5 @@ with tf.Session() as sess:
 		#predictions.extend(prediction[0])
 
 
+	pickledModel.save_image(np.transpose(im, [0,3,2,1])[0,:,:,0],'fooimage.tif')
 

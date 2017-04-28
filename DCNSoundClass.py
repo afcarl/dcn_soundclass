@@ -144,7 +144,10 @@ def getImage(fnames, nepochs=None, mtlclasses=0) :
     else : 
     	label, image = spectreader.getImage(fnames, nepochs)
 
+    #same as np.flatten
+    # I can't seem to make shuffle batch work on images in their native shapes.
     image=tf.reshape(image,[k_freqbins*k_width])
+
     # re-define label as a "one-hot" vector 
     # it will be [0,1] or [1,0] here. 
     # This approach can easily be extended to more classes.
@@ -217,9 +220,15 @@ vimageBatch, vlabelBatch = tf.train.batch(
 # Step 2: create placeholders for features (X) and labels (Y)
 # each lable is one hot vector.
 # 'None' here allows us to fill the placeholders with different size batches (which we do with training and validation batches)
+#X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
 X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
-#X = tf.Variable(tf.float32, [None,k_freqbins*k_width], validate_shape=False, name= "X")
-x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels])  # reshape so we can run a 2d convolutional net
+
+if FLAGS.freqorientation == "height" :
+	x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels]) 
+else :
+	print('set up reshaping for freqbins as channels')
+	foo1 = tf.reshape(X, [-1,k_freqbins,k_width,1]) #unflatten (could skip this step if it wasn't flattenned in the first place!)
+	x_image = tf.transpose(foo1, perm=[0,3,2,1]) #moves freqbins from height to channel dimension
 
 Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes, one-hot
 MTLY = tf.placeholder(tf.float32, [None,k_mtlnumclasses], name= "MTLY")  #labeled classes, one-hot 

@@ -73,8 +73,9 @@ softmax_preds=var_list[2]
 assert softmax_preds.graph is tf.get_default_graph()
 
 def soundfileBatch(slist) :
-	#return [np.flipud(Image.open(name).point(lambda i: i*255)).flatten() for name in slist ]
+	# The training network scales to 255 and then flattens before stuffing into batches
 	return [np.array(Image.open(name).point(lambda i: i*255)).flatten() for name in slist ]
+
 
 #just test the validation set 
 #Flipping and scaling seem to have almost no effect on the clasification accuracy
@@ -129,14 +130,14 @@ with tf.Session() as sess:
 
 	if 1 :
 		for v in ["h1:0"] :
-			im = np.reshape(np.transpose(rimages[6]), [1,k_width*k_freqbins ])
+			im = np.reshape(rimages[6], [1,k_width*k_freqbins ])
 			print(tf.get_default_graph().get_tensor_by_name(v))
 			print(sess.run(tf.get_default_graph().get_tensor_by_name(v), feed_dict ={ X : im,  keepProb : 1.0 }))
 
 
-
+	print('predictions are : ')
 	for im_ in rimages :
-		im = np.reshape(np.transpose(im_), [1,k_width*k_freqbins ])
+		im = np.reshape(im_, [1,k_width*k_freqbins ])
 		prediction = sess.run(softmax_preds, feed_dict ={ X : im,  keepProb : 1.0 })
 		print(str(prediction[0]))
 
