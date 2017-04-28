@@ -16,20 +16,34 @@ import time
 import numpy as np
 import tensorflow as tf
 
-import vgg_model
+import pickledModel
 import utils
 
-if len(sys.argv) != 5 :
-    print('Usage python style_transfer.py content.noext style.noext noise outputDirectory')
-    sys.exit()
-else :
-    i_content = sys.argv[1]
-    i_style = sys.argv[2]
-    i_noise=float(sys.argv[3])
-    i_outdir=sys.argv[4]
-    print ('Argument List:', i_content, i_style, i_noise)
+# get args from command line
+import argparse
+FLAGS = []
 
-CHECKPOINTING=True
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--content', type=str, help='name of file in content dir, w/o .ext'  ) 
+parser.add_argument('--style', type=str, help='name of file in style dir, w/o .ext'  ) 
+parser.add_argument('--noise', type=float, help='in range [0,1]'  ) 
+parser.add_argument('--outdir', type=str, help='for output images'  ) 
+
+parser.add_argument('--stateFile', type=str, help='stored graph'  ) 
+
+FLAGS, unparsed = parser.parse_known_args()
+
+i_content = FLAGS.content
+i_style = FLAGS.style
+i_noise=FLAGS.noise
+i_outdir=FLAGS.outdir
+
+if any(v is None for v in vars(FLAGS).values()) :
+    print('All args are required with their flags. For help: python style_transfer --help')
+    sys.exit()
+
+
+CHECKPOINTING=False
 
 FILETYPE = ".tif"
 # parameters to manage experiments
@@ -37,15 +51,16 @@ STYLE = i_style
 CONTENT = i_content
 STYLE_IMAGE = 'styles/' + STYLE + FILETYPE
 CONTENT_IMAGE = 'content/' + CONTENT + FILETYPE
-IMAGE_HEIGHT = 256
+IMAGE_HEIGHT = 1
 IMAGE_WIDTH = 856
+IMAGE_CHANNELS = 256
   # This seems to be the paramter that really controls the balance between content and style
   # The more noise, the less content
 NOISE_RATIO = i_noise # percentage of weight of the noise for intermixing with the content image
 
 # Layers used for style features. You can change this.
 STYLE_LAYERS = ['h1', 'h2']
-W = [0.5, 1.0, 1.5, 3.0, 4.0] # give more weights to deeper layers.
+W = [1.0, 2.0] # give more weights to deeper layers.
 
 # Layer used for content features. You can change this.
 CONTENT_LAYER = 'h2'
@@ -58,22 +73,9 @@ LOGDIR = './log_graph'			#create folder manually
 CHKPTDIR =  './checkpoints'		# create folder manually
 OUTPUTDIR = i_outdir
 
-ITERS = 1
+ITERS = 200
 LR = 2.0
 
-#MEAN_PIXELS = np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3))
-MEAN_PIXELS = np.array([128, 128, 128]).reshape((1,1,1,3))
-""" MEAN_PIXELS is defined according to description on their github:
-https://gist.github.com/ksimonyan/211839e770f7b538e2d8
-'In the paper, the model is denoted as the configuration D trained with scale jittering. 
-The input images should be zero-centered by mean pixel (rather than mean image) subtraction. 
-Namely, the following BGR values should be subtracted: [103.939, 116.779, 123.68].'
-"""
-
-# VGG-19 parameters file
-#VGG_DOWNLOAD_LINK = 'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-verydeep-19.mat'
-#VGG_MODEL = 'imagenet-vgg-verydeep-19.mat'
-#EXPECTED_BYTES = 534904783
 
 def _create_content_loss(p, f):
     """ Calculate the loss between the feature representation of the
@@ -149,25 +151,22 @@ def _create_style_loss(A, model):
     """ Return the total style loss
     """
     n_layers = len(STYLE_LAYERS)
+    # E has one dimension with length equal to the number of layers
     E = [_single_style_loss(A[i], model[STYLE_LAYERS[i]]) for i in range(n_layers)]
-    
-    #print('E is ' + str(tf.shape(E)))
-    #print('W is ' + str(tf.shape(W)))
+
     ###############################
     ## TO DO: return total style loss
-    foo =  (sum([W[l] * E[l] for l in range(len(STYLE_LAYERS))]))
-    #print('foo  is ' + str(foo))
-	#    return (sum([W[l] * E[l] for l in range(len(STYLE_LAYERS))]))
     return np.dot(W, E)
     ###############################
 
 def _create_losses(model, input_image, content_image, style_image):
+    print('_create_losses')
     with tf.variable_scope('loss') as scope:
         with tf.Session() as sess:
             sess.run(input_image.assign(content_image)) # assign content image to the input variable
             # model[CONTENT_LAYER] is a relu op
             p = sess.run(model[CONTENT_LAYER])
-        # ??????????????????????????????????????????????????????
+
         content_loss = _create_content_loss(p, model[CONTENT_LAYER])
 
         with tf.Session() as sess:
@@ -208,9 +207,12 @@ def train(model, generated_image, initial_image):
         ## 1. initialize your variables
         ## 2. create writer to write your graph
         sess.run ( tf.global_variables_initializer ())
+        print('initialize .....')
+
         writer = tf.summary.FileWriter(LOGDIR, sess.graph)
         ###############################
-        sess.run(input_image.assign(initial_image))
+        print('Do initial run to assign image')
+        sess.run(model["X"].assign(initial_image))
         if CHECKPOINTING :
             ckpt = tf.train.get_checkpoint_state(os.path.dirname(CHKPTDIR + '/checkpoint'))
         else :
@@ -234,16 +236,18 @@ def train(model, generated_image, initial_image):
                 # following the optimazaiton step, calculate loss
 
                  # get the modified image
-                gen_image = sess.run(input_image)
+                gen_image = sess.run(model["X"])
                 
+                #Now create losses
+                print('now create losses')
                 model['content_loss'], model['style_loss'], model['total_loss'] = _create_losses(model, 
-                                                input_image, content_image, style_image)
+                                                model["X"], content_image, style_image)
                 summary = sess.run(model['summary_op'])
                
                	# reassign the input to be the generated image from the last iteration
-                sess.run(input_image.assign(gen_image))
+                sess.run(model["X"].assign(gen_image))
                 ###############################
-                gen_image = gen_image + MEAN_PIXELS
+                #gen_image = gen_image + MEAN_PIXELS
                 writer.add_summary(summary, global_step=index)
                 print('Step {}\n   Sum: {:5.1f}'.format(index + 1, np.sum(gen_image)))
                 print('   Loss: {:5.1f}'.format(sess.run(model['total_loss']))) #???????
@@ -251,44 +255,47 @@ def train(model, generated_image, initial_image):
                 start_time = time.time()
 
                 filename = OUTPUTDIR + '/%d.tif' % (index)
-                utils.save_image(filename, gen_image[0])
+                pickledModel.save_image(np.transpose(gen_image[0][0]), filename)
 
                 if (index + 1) % 20 == 0:
                     saver.save(sess, CHKPTDIR + '/style_transfer', index)
 
         writer.close()
 
-#took this out of main to make input_image GLOBAL
-#def main():
+#-----------------------------------
 
 print('RUN MAIN')
-with tf.variable_scope('input') as scope:
-	# use variable instead of placeholder because we're training the intial image to make it
-	# look like both the content image and the style image
-	input_image = tf.Variable(np.zeros([1, IMAGE_HEIGHT, IMAGE_WIDTH, 3]), dtype=tf.float32)
 
+model=pickledModel.load(FLAGS.stateFile)
 
-utils.download(VGG_DOWNLOAD_LINK, VGG_MODEL, EXPECTED_BYTES)
-model = vgg_model.load_vgg(VGG_MODEL, input_image)
+print('MODEL LOADED')
+
 model['global_step'] = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 
-content_image = utils.get_resized_image(CONTENT_IMAGE, IMAGE_HEIGHT, IMAGE_WIDTH)
-content_image = content_image - MEAN_PIXELS
-style_image = utils.get_resized_image(STYLE_IMAGE, IMAGE_HEIGHT, IMAGE_WIDTH)
-style_image = style_image - MEAN_PIXELS
+content_image = pickledModel.loadImage(CONTENT_IMAGE)
+print('content_image shape is ' + str(content_image.shape))
+print('content_image max is ' + str(np.amax(content_image) ))
+print('content_image min is ' + str(np.amin(content_image) ))
 
+#content_image = content_image - MEAN_PIXELS
+style_image = pickledModel.loadImage(STYLE_IMAGE)
+print('style_image max is ' + str(np.amax(style_image) ))
+print('style_image min is ' + str(np.amin(style_image) ))
+#style_image = style_image - MEAN_PIXELS
+
+print(' NEXT, create losses')
 model['content_loss'], model['style_loss'], model['total_loss'] = _create_losses(model, 
-                                                input_image, content_image, style_image)
+                                                model["X"], content_image, style_image)
 ###############################
 ## TO DO: create optimizer
 ## model['optimizer'] = ...
-model['optimizer'] =  tf.train.AdamOptimizer(LR).minimize(model['total_loss'])
+model['optimizer'] =  tf.train.AdamOptimizer(LR).minimize(model['total_loss'], var_list=[model["X"]])
 ###############################
 model['summary_op'] = _create_summary(model)
 
-initial_image = utils.generate_noise_image(content_image, IMAGE_HEIGHT, IMAGE_WIDTH, NOISE_RATIO)
+initial_image = pickledModel.generate_noise_image(content_image, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS, NOISE_RATIO)
 #def train(model, generated_image, initial_image):
-train(model, input_image, initial_image)
+train(model, model["X"], initial_image)
 
 #if __name__ == '__main__':
 #    main()

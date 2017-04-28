@@ -5,7 +5,7 @@ python testModel.py  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/my-model.meta
 """
 import tensorflow as tf
 import numpy as np
-import styModel
+import pickledModel
 
 from PIL import TiffImagePlugin
 from PIL import Image
@@ -22,21 +22,13 @@ VERBOSE=False
 # ------------------------------------------------------
 # get any args provided on the command line
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('metamodel', type=str, help='stored graph'  ) 
-parser.add_argument('checkptDir', type=str, help='the checkpoint directory from where the latest checkpoint will be read to restore values for variables in the graph'  ) 
+parser.add_argument('pickleFile', type=str, help='stored graph'  ) 
 FLAGS, unparsed = parser.parse_known_args()
 
 k_freqbins=256
 k_width=856
 
-styg = styModel.load(FLAGS.metamodel, FLAGS.checkptDir)
-#print('got my graph! ' + str(g))
-if VERBOSE : 
-	vnamelist =[n.name for n in  tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)]
-	print('TRAINABLE vars:')
-	for n in vnamelist :
-		print(n)
-
+styg = pickledModel.load(FLAGS.pickleFile)
 
 print(' here we go ........')
 
@@ -71,9 +63,8 @@ im=np.empty([1,1,k_width,k_freqbins ])
 with tf.Session() as sess:
 
 	predictions=[]
-#	#sess.run ( tf.global_variables_initializer ())
-#	#savior.restore(sess, tf.train.latest_checkpoint(FLAGS.checkptDir))
-	styModel.initialize_variables(sess)
+	sess.run ( tf.global_variables_initializer ())
+
 	#print('ok, all initialized')
 	if 0 :
 		print ('...GLOBAL_VARIABLES :')  #probalby have to restore from checkpoint first

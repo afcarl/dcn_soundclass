@@ -7,6 +7,8 @@ import spectreader
 import os
 import time
 
+import pickle
+
 # get args from command line
 import argparse
 FLAGS = None
@@ -160,6 +162,13 @@ def get_datafiles(a_dir, startswith):
     """ 
     return  [a_dir + '/' + name for name in os.listdir(a_dir)
             if name.startswith(startswith)]
+
+def saveState(sess, vlist, fname) :
+	state={}
+	for v in vlist :
+		state[v.name] = sess.run(v)
+	pickle.dump(state, open( fname, "wb" ))
+
 
 #=============================================
 # Step 1: Read in data
@@ -503,6 +512,7 @@ def trainModel():
 
 		print(' now save meta model')
 		meta_graph_def = tf.train.export_meta_graph(filename=OUTDIR + '/my-model.meta')
+		saveState(sess, trainable, OUTDIR + '/state.pickle') 
 
 		print(' ===============================================================') 
 

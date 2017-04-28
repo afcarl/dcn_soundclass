@@ -11,17 +11,14 @@
 
 import tensorflow as tf
 import numpy as np
-import trainedModel
 
-from PIL import TiffImagePlugin
+from PIL import TiffImagePlugin, ImageOps
 from PIL import Image
 
-#global variables 
-g_st_saver=None
-g_chkptdir=None
-g_trainedgraph=None
-g_graph=None
 
+import pickle
+
+g_graph=None
 
 k_freqbins=256
 k_width=856
@@ -67,14 +64,32 @@ def generate_noise_image(content_image, height, width, channels, noise_ratio=0.6
     print('noise_image shape is ' + str(noise_image.shape))
     return noise_image * noise_ratio + content_image * (1. - noise_ratio)
 
-def save_image(path, image):
-    # Output should add back the mean pixels we subtracted at the beginning
-    image = image[0] # the image
-    image = np.clip(image, 0, 255).astype('uint8')
-    scipy.misc.imsave(path, image)
+def save_image(image, fname, scaleinfo=None):
+	print('save_image: shape is ' + str(image.shape))
+	print('image max is ' + str(np.amax(image) ))
+	print('image min is ' + str(np.amin(image) ))
+	# Output should add back the mean pixels we subtracted at the beginning
+	image = np.clip(image, 0, 255).astype('uint8')
+
+	info = TiffImagePlugin.ImageFileDirectory()
+    
+	if (scaleinfo == None) :
+	    info[270] = '80, 0'
+	else :
+	    info[270] = scaleinfo
+
+
+	#scipy.misc.imsave(path, image)
+
+	bwarray=np.asarray(image)/255.
+
+	savimg = Image.fromarray(np.float64(bwarray)) #==============================
+	savimg.save(fname, tiffinfo=info)
+	#print('RGB2TiffGray : tiffinfo is ' + str(info))
+	return info[270] # just in case you want it for some reason
     
 
-def constructSTModel(tg) :
+def constructSTModel(state) :
 	global g_graph
 	g_graph = {} 
 
@@ -85,8 +100,8 @@ def constructSTModel(tg) :
 
 	g_graph["X"] = tf.Variable(np.zeros([1,k_height,k_width,k_inputChannnels]), dtype=tf.float32, name="s_X")
 	
-	g_graph["w1"]=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannnels, L1_CHANNELS], stddev=0.1), name="s_w1")
-	g_graph["b1"]=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="s_b1")
+	g_graph["w1"]=tf.constant(state["w1:0"], name="s_w1")
+	g_graph["b1"]=tf.constant(state["b1:0"], name="s_b1")
 	#g_graph["w1"]=tf.Variable(tf.truncated_normal(getShape( tg, "w1"), stddev=0.1), name="w1")
 	#g_graph["b1"]=tf.Variable(tf.constant(0.1, shape=getShape( tg, "b1")), name="b1")
 	
@@ -95,8 +110,8 @@ def constructSTModel(tg) :
 	# 2x2 max pooling
 	g_graph["h1pooled"] = tf.nn.max_pool(g_graph["h1"], ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name="s_h1_pooled")
 
-	g_graph["w2"]=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="s_w2")
-	g_graph["b2"]=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="s_b2")
+	g_graph["w2"]=tf.constant(state["w2:0"], name="s_w2")
+	g_graph["b2"]=tf.constant(state["b2:0"], name="s_b2")
 	#g_graph["w2"]=tf.Variable(tf.truncated_normal(getShape( tg, "w2"), stddev=0.1), name="w2")
 	#g_graph["b2"]=tf.Variable(tf.constant(0.1, shape=getShape( tg, "b2")), name="b2")
 
@@ -106,8 +121,8 @@ def constructSTModel(tg) :
 	g_graph["convlayers_output"] = tf.reshape(g_graph["h2pooled"], [-1, k_downsampledWidth * k_downsampledHeight*L2_CHANNELS]) # to prepare it for multiplication by W_fc1
 
 #
-	g_graph["W_fc1"] = tf.Variable(tf.truncated_normal([k_downsampledWidth * k_downsampledHeight * k_convLayerOutputChannels, FC_SIZE], stddev=0.1), name="s_W_fc1")
-	g_graph["b_fc1"] = tf.Variable(tf.constant(0.1, shape=[FC_SIZE]) , name="s_b_fc1")
+	g_graph["W_fc1"] = tf.constant(state["W_fc1:0"], name="s_W_fc1")
+	g_graph["b_fc1"] = tf.constant(state["b_fc1:0"], name="s_b_fc1")
 
 	#g_graph["keepProb"]=tf.placeholder(tf.float32, (), name= "keepProb")
 	#g_graph["h_fc1"] = tf.nn.relu(tf.matmul(tf.nn.dropout(g_graph["convlayers_output"], g_graph["keepProb"]), g_graph["W_fc1"]) + g_graph["b_fc1"], name="h_fc1")
@@ -115,8 +130,8 @@ def constructSTModel(tg) :
 
 
 	#Read out layer
-	g_graph["W_fc2"] = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="s_W_fc2")
-	g_graph["b_fc2"] = tf.Variable(tf.constant(0.1, shape=[k_numClasses]), name="s_b_fc2")
+	g_graph["W_fc2"] = tf.constant(state["W_fc2:0"], name="s_W_fc2")
+	g_graph["b_fc2"] = tf.constant(state["b_fc2:0"], name="s_b_fc2")
 
 
 	g_graph["logits_"] = tf.matmul(g_graph["h_fc1"], g_graph["W_fc2"])
@@ -130,60 +145,11 @@ def constructSTModel(tg) :
 
 
 
-def load(meta_model_file, restore_chkptDir) :
-
-	global g_st_saver
-	global g_chkptdir
-	global g_trainedgraph
-
-	g_chkptdir=restore_chkptDir # save in global for use during initialize
-
-	g_trainedgraph, g_st_saver = trainedModel.load(meta_model_file, restore_chkptDir)
-	g = constructSTModel(g_trainedgraph)
+def load(pickleFile) :
+	print(' will read state from ' + pickleFile)
+	state = pickle.load( open( pickleFile, "rb" ) )
+	g = constructSTModel(state)
 
 	return g
 
-def initialize_variables(sess) :
-	global g_graph
-
-	print('initialize_variables: init then restore')
-	#First initalize all variables
-	sess.run ( tf.global_variables_initializer ())
-	#next restore the trained graph variable values
-	g_st_saver.restore(sess, tf.train.latest_checkpoint(g_chkptdir))
-
-	tf.GraphKeys.USEFUL = 'useful'
-	var_list = tf.get_collection(tf.GraphKeys.USEFUL)
-
-	#print('var_list[3] is ' + str(var_list[3]))
-
-	# Now get the values of the trained graph in to the new style graph
-	sess.run(g_graph["w1"].assign(g_trainedgraph.get_tensor_by_name("w1:0")))
-	sess.run(g_graph["b1"].assign(g_trainedgraph.get_tensor_by_name("b1:0")))
-	sess.run(g_graph["w2"].assign(g_trainedgraph.get_tensor_by_name("w2:0")))
-	sess.run(g_graph["b2"].assign(g_trainedgraph.get_tensor_by_name("b2:0")))
-
-	sess.run(g_graph["W_fc1"].assign(g_trainedgraph.get_tensor_by_name("W_fc1:0")))
-	sess.run(g_graph["b_fc1"].assign(g_trainedgraph.get_tensor_by_name("b_fc1:0")))
-	sess.run(g_graph["W_fc2"].assign(g_trainedgraph.get_tensor_by_name("W_fc2:0")))
-	sess.run(g_graph["b_fc2"].assign(g_trainedgraph.get_tensor_by_name("b_fc2:0")))
-
-	#sess.run(g_graph["w1"].assign(var_list[3]))
-	#sess.run(g_graph["b1"].assign(var_list[4]))
-	#sess.run(g_graph["w2"].assign(var_list[5]))
-	#sess.run(g_graph["b2"].assign(var_list[6]))
-
-	#sess.run(g_graph["W_fc1"].assign(var_list[7]))
-	#sess.run(g_graph["b_fc1"].assign(var_list[8]))
-	#sess.run(g_graph["W_fc2"].assign(var_list[9]))
-	#sess.run(g_graph["b_fc2"].assign(var_list[10]))
-
-	if VERBOSE : 
-		print ('...GLOBAL_VARIABLES :')  #probalby have to restore from checkpoint first
-		all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-		for v in all_vars:
-			v_ = sess.run(v)
-			print(v_)
-
-	print('VARIABLES Initialized')
 
