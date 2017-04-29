@@ -7,6 +7,8 @@ checkpoints/*
 historicallogs/
 log_graph/*
 save/
+output/
+testmodel/
 data50/*/
 data50/validation-*
 data50/train-*

@@ -42,8 +42,8 @@ k_poolStride = 1  # default for freqs as channels
 k_downsampledHeight = 1			# default for freqs as channels
 k_downsampledWidth = k_width/4 # no matter what the orientation - freqs as channels or as y dim
 
-L1_CHANNELS=64
-L2_CHANNELS=32
+L1_CHANNELS=32
+L2_CHANNELS=64
 FC_SIZE = 32
 
 k_convLayerOutputChannels = L2_CHANNELS
@@ -56,7 +56,8 @@ def getShape(g, name) :
 	return g.get_tensor_by_name(name + ":0").get_shape()
 
 def loadImage(fname) :
-	return np.reshape(np.transpose(np.array(Image.open(fname).point(lambda i: i*255)).flatten()), [1,k_height,k_width,k_inputChannnels])
+	#transform into 1D width with frequbins in channel dimension (we do this in the graph in the training net, but not with this reconstructed net)
+	return np.transpose(np.reshape(np.array(Image.open(fname).point(lambda i: i*255)), [1,k_freqbins,k_width,1]), [0,3,2,1]) 
 
 def generate_noise_image(content_image, height, width, channels, noise_ratio=0.6):
     noise_image = np.random.uniform(-1, 1, 
