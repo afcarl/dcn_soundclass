@@ -8,12 +8,7 @@ import tiffspect
 import librosa
 import librosa.display
 
-import matplotlib.pyplot as plt
-
-K_SPECTDIR = '/home/lonce/tflow/DATA-SETS/ESC-50-spect'
-k_soundsPerClass=125 # must divide the total number of sounds evenly!
-
-#============================================
+# First some utilities, and the function we want to use to classify our spectrograms 
 
 def weightedCentroid(spect) :
     """
@@ -34,7 +29,7 @@ def spectFile2Centroid(fname) :
     D1, _ = tiffspect.Tiff2LogSpect(fname)
     D2 = log2mag(D1)
     return weightedCentroid(D2)
-#============================================
+
 
 # Next, some utilities for managing files
 #----------------------------------------
@@ -60,8 +55,7 @@ def filestats (filenames, func) :
     stats = [[fname, func(fname)] for fname in filenames]
     return stats
 
-#============================================
-
+#---------------------------------------------------------------------------
 
 def createBalancedClassesWithFunc(topDirectory, regexString, func, numPerClass, action="move") :
     """
@@ -93,9 +87,9 @@ def removeAllSecondaryClassNames(directory) :
         else :
             print('do nothing with ' + fname)
 
-#============================================
+#--------------------------------------------------------------------------------
+#removeAllSecondaryClassNames('.')
 
-# DO IT
-stats, stats_ordered  = createBalancedClassesWithFunc(K_SPECTDIR, '.*/([1-5]).*', spectFile2Centroid, k_soundsPerClass, action="print")
-stats, stats_ordered  = createBalancedClassesWithFunc(K_SPECTDIR, '.*/([1-5]).*', spectFile2Centroid, k_soundsPerClass, action="move")
+#stats, stats_ordered  = createBalancedClassesWithFunc('/Volumes/Bothways/ZCODE/TENSORFLOW/dcn_soundclass/data50', '.*/(train|validate)/([1-5]).*', spectFile2Centroid, 250, action="print")
+stats, stats_ordered  = createBalancedClassesWithFunc('.', '.*/(train|validate)/([1-5]).*', spectFile2Centroid, 250, action="move")
 
