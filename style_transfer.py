@@ -17,7 +17,6 @@ import numpy as np
 import tensorflow as tf
 
 import pickledModel
-import utils
 
 # get args from command line
 import argparse
@@ -26,17 +25,17 @@ FLAGS = []
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--content', type=str, help='name of file in content dir, w/o .ext'  ) 
 parser.add_argument('--style', type=str, help='name of file in style dir, w/o .ext'  ) 
-parser.add_argument('--noise', type=float, help='in range [0,1]'  ) 
-parser.add_argument('--outdir', type=str, help='for output images'  ) 
+parser.add_argument('--noise', type=float, help='in range [0,1]', default=.5  ) 
+parser.add_argument('--iter', type=int, help='number of iterations (on cpu, runtime is less than 1 sec/iter)', default=600  ) 
+parser.add_argument('--alpha', type=float, help='amount to weight conent', default=10  ) 
+parser.add_argument('--beta', type=float, help='amount to weight style', default=200  ) 
+parser.add_argument('--randomize', type=int, help='0: use trained weights, 1: randomize model weights', choices=[0,1], default=0 ) 
 
-parser.add_argument('--stateFile', type=str, help='stored graph'  ) 
+parser.add_argument('--outdir', type=str, help='for output images', default="." ) 
+parser.add_argument('--stateFile', type=str, help='stored graph', default=None  ) 
 
 FLAGS, unparsed = parser.parse_known_args()
-
-i_content = FLAGS.content
-i_style = FLAGS.style
-i_noise=FLAGS.noise
-i_outdir=FLAGS.outdir
+print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
 if any(v is None for v in vars(FLAGS).values()) :
     print('All args are required with their flags. For help: python style_transfer --help')
@@ -47,16 +46,16 @@ CHECKPOINTING=False
 
 FILETYPE = ".tif"
 # parameters to manage experiments
-STYLE = i_style
-CONTENT = i_content
+STYLE = FLAGS.style
+CONTENT = FLAGS.content
 STYLE_IMAGE = 'styles/' + STYLE + FILETYPE
 CONTENT_IMAGE = 'content/' + CONTENT + FILETYPE
 IMAGE_HEIGHT = 1
 IMAGE_WIDTH = 856
-IMAGE_CHANNELS = 256
+IMAGE_CHANNELS = 257
   # This seems to be the paramter that really controls the balance between content and style
   # The more noise, the less content
-NOISE_RATIO = i_noise # percentage of weight of the noise for intermixing with the content image
+NOISE_RATIO = FLAGS.noise # percentage of weight of the noise for intermixing with the content image
 
 # Layers used for style features. You can change this.
 STYLE_LAYERS = ['h1', 'h2']
@@ -66,14 +65,14 @@ W = [1.0, 2.0] # give more weights to deeper layers.
 CONTENT_LAYER = 'h2'
 
 #Relationship a/b is 1/20
-ALPHA = 10  
-BETA = 200
+ALPHA = FLAGS.alpha   #content
+BETA = FLAGS.beta     #style
 
-LOGDIR = './log_graph'			#create folder manually
-CHKPTDIR =  './checkpoints'		# create folder manually
-OUTPUTDIR = i_outdir
+LOGDIR = FLAGS.outdir + '/log_graph'			#create folder manually
+CHKPTDIR =  FLAGS.outdir + '/checkpoints'		# create folder manually
+OUTPUTDIR = FLAGS.outdir
 
-ITERS = 200
+ITERS = FLAGS.iter
 LR = 2.0
 
 
@@ -266,7 +265,7 @@ def train(model, generated_image, initial_image):
 
 print('RUN MAIN')
 
-model=pickledModel.load(FLAGS.stateFile)
+model=pickledModel.load(FLAGS.stateFile, FLAGS.randomize)
 
 print('MODEL LOADED')
 

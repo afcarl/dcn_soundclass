@@ -38,16 +38,16 @@ def logSpect2Tiff(outimg, fname, scaleinfo=None):
 def Tiff2LogSpect(fname) :
     """Read tif images, and expand to original scale, return single channel image"""
     img = Image.open(fname)
-    print('Tiff2LogSpect: image min is ' + str(np.amin(img)) + ', and image max is ' + str(np.amax(img)))
+    #print('Tiff2LogSpect: image min is ' + str(np.amin(img)) + ', and image max is ' + str(np.amax(img)))
     try :
         img.tag[270] = img.tag[270]
     except :
-        print('Tiff2LogSpect: no img.tag[207], no scale adjustment')
+        print('Tiff2LogSpect: no img.tag[207], no scale adjustment for ' +  fname)
         img.tag[270] = '80., 0'
         
     it = img.tag[270][0]
     sscale, sshift = it.split(',')
-    print('Tiff2LogSpect: img.tag info says scale is ' + sscale + ', and shift is ' + sshift)
+    #print('Tiff2LogSpect: img.tag info says scale is ' + sscale + ', and shift is ' + sshift)
     scale = float(sscale)
     shift = float(sshift)
     #outimg = [x -1 for x in img]
@@ -56,4 +56,10 @@ def Tiff2LogSpect(fname) :
     outimg = outimg*scale #  [x *scale for x in outimg] # 
     outimg = outimg + shift #  [x +shift for x in outimg] # 
     return (np.flipud(outimg), img.tag[270])
+
+def Tiff2MagSpect(fname) :
+    logmag, tag = Tiff2LogSpect(fname)
+    return np.power(10, logmag/20.)
+
+
     
