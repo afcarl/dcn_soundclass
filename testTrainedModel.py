@@ -1,6 +1,6 @@
 """
 eg 
-python testModel.py  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/my-model.meta  logs.2017.04.21/mtl_2.or_channels.epsilon_1.0/checkpoints/
+python testModel.py  logs.2017.04.28/mtl_2.or_channels.epsilon_1.0/my-model.meta  logs.2017.04.28/mtl_2.or_channels.epsilon_1.0/checkpoints/
 
 """
 import tensorflow as tf
@@ -22,7 +22,7 @@ parser.add_argument('metamodel', type=str, help='stored graph'  )
 parser.add_argument('checkptDir', type=str, help='the checkpoint directory from where the latest checkpoint will be read to restore values for variables in the graph'  ) 
 FLAGS, unparsed = parser.parse_known_args()
 
-k_freqbins=256
+k_freqbins=257
 k_width=856
 
 g, savior = trainedModel.load(FLAGS.metamodel, FLAGS.checkptDir)
@@ -79,22 +79,22 @@ def soundfileBatch(slist) :
 
 #just test the validation set 
 #Flipping and scaling seem to have almost no effect on the clasification accuracy
-rimages=soundfileBatch(['data2/validate/205 - Chirping birds/5-242490-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-242491-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-243448-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-243449-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-243450-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-243459-A._2_.tif',
-	'data2/validate/205 - Chirping birds/5-243459-B._2_.tif',
-	'data2/validate/205 - Chirping birds/5-257839-A._2_.tif',
-	'data2/validate/101 - Dog/5-203128-A._1_.tif',
-	'data2/validate/101 - Dog/5-203128-B._1_.tif',
-	'data2/validate/101 - Dog/5-208030-A._1_.tif',
-	'data2/validate/101 - Dog/5-212454-A._1_.tif',
-	'data2/validate/101 - Dog/5-213855-A._1_.tif',
-	'data2/validate/101 - Dog/5-217158-A._1_.tif',
+rimages=soundfileBatch(['data2/validate/205 - Chirping birds/5-242490-A._11_.tif',
+	'data2/validate/205 - Chirping birds/5-242491-A._12_.tif',
+	'data2/validate/205 - Chirping birds/5-243448-A._14_.tif',
+	'data2/validate/205 - Chirping birds/5-243449-A._15_.tif',
+	'data2/validate/205 - Chirping birds/5-243450-A._15_.tif',
+	'data2/validate/205 - Chirping birds/5-243459-A._13_.tif',
+	'data2/validate/205 - Chirping birds/5-243459-B._13_.tif',
+	'data2/validate/205 - Chirping birds/5-257839-A._10_.tif',
+	'data2/validate/101 - Dog/5-203128-A._4_.tif',
+	'data2/validate/101 - Dog/5-203128-B._5_.tif',
+	'data2/validate/101 - Dog/5-208030-A._9_.tif',
+	'data2/validate/101 - Dog/5-212454-A._4_.tif',
+	'data2/validate/101 - Dog/5-213855-A._4_.tif',
+	'data2/validate/101 - Dog/5-217158-A._2_.tif',
 	'data2/validate/101 - Dog/5-231762-A._1_.tif',
-	'data2/validate/101 - Dog/5-9032-A._1_.tif',
+	'data2/validate/101 - Dog/5-9032-A._12_.tif',
 	])
 
 #rimages=np.random.uniform(0.,1., (3,k_freqbins*k_width))

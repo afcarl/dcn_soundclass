@@ -14,7 +14,7 @@ optimizer=adam
 orientationArray=(channels)
 epsilonArray=(1.0)
 
-mtlArray=(2)
+mtlArray=(16)
 
 for  mtl in ${mtlArray[@]}
 do

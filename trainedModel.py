@@ -18,7 +18,7 @@ g_chkptdir=None
 g_trainedgraph=None
 
 
-k_freqbins=256
+k_freqbins=257
 k_width=856
 
 VERBOSE=1

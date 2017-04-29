@@ -44,7 +44,7 @@ print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
 #HARD-CODED data-dependant parameters ------------------
 #dimensions of image (pixels)
-k_freqbins=256
+k_freqbins=257
 
 k_height=1						# default for freqs as channels
 k_inputChannnels=k_freqbins		# default for freqs as channels

@@ -20,7 +20,7 @@ import pickle
 
 g_graph=None
 
-k_freqbins=256
+k_freqbins=257
 k_width=856
 
 VERBOSE=0
@@ -42,8 +42,8 @@ k_poolStride = 1  # default for freqs as channels
 k_downsampledHeight = 1			# default for freqs as channels
 k_downsampledWidth = k_width/4 # no matter what the orientation - freqs as channels or as y dim
 
-L1_CHANNELS=32
-L2_CHANNELS=64
+L1_CHANNELS=64
+L2_CHANNELS=32
 FC_SIZE = 32
 
 k_convLayerOutputChannels = L2_CHANNELS

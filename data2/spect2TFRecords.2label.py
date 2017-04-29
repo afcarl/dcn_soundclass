@@ -450,9 +450,9 @@ def _find_image_files(data_dir, labels_file):
       if (len(scns) == 0) :
         print('warning, ' + fname + ' has no recognized secondary class names')
       else : # this file has a secondary class label
-        secondary_class = scns[0] # ignoring multiple secanries for now
+        secondary_class = scns[0] # ignoring multiple secondaries for now
         if not (secondary_class in unique_2ndary_labels) :
-          unique_2ndary_labels.extend(secondary_class)
+          unique_2ndary_labels.append(secondary_class)
         labels_2.append(unique_2ndary_labels.index(secondary_class) +1) # leaving class 0 as a background class
         texts_2.append(secondary_class)
 

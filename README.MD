@@ -2,6 +2,9 @@
 Developed with Python 2.7 and Tensorflow 1.0
 --------------------------------------------
 
+Note: This code uses spectrogram files stored in the .tif format. Spectrograms are stored as log magnitude,  normalized to [0, 1] so that -80dB corresponds to 0, and 0dB corresponds to 1. 
+
+
 To run this model, 
 
 1) first get the original raw data.
@@ -18,7 +21,13 @@ ESC50_Convert.ipynb
 
 Set the parameters in the first cell, making sure that the directories you want to use exist. 
 Run each cell in sequence to create wave files from the ogg files, and then tiff spectrogram files from wav files. 
+This notebook also includes code for generating a label file (text file with list of class lables)
+
+
+2.5) If you want to add a secondary class to the files to be used for Multi Task Learning (MTL - a kind of regularization), use the Centroid2ndaryClassMaker python notebook (in utils).
+	Secondary class ids are tacked on to the file names (foo.tif -> foo._2ndaryID_.tif), and the rest of the pipeline knows how to deal with that. 
     
+
 3) Divide your data into two folders, train and validate 
 	a) Go to the data directory for the project.
 	   Create two new subdirectories there, train and validate
@@ -35,7 +44,8 @@ Run each cell in sequence to create wave files from the ogg files, and then tiff
 			prompt> rsync -R */5*.tif ../validate
 
 4) The final step is to turn these data into TFRecord files to be read by the tensorflow training code.
-	Go to ./data and execute runcmd.txt 
+	a) move the label file from the ./data/esc50spect directory to the ./data directory
+	b) Go to ./data and execute runcmd.txt  (or runcmd.2label.txt to include secondary labels for MTL)
 	
 
 5) Now you are ready to back up to the main project directory and train using the TFRecord files for data.
@@ -44,6 +54,6 @@ Run each cell in sequence to create wave files from the ogg files, and then tiff
 
 Note: You can test and explore this model with a tiny subset of the ESC-50 sounds provided with the git repository. 
 ./data2 contains dog and vird sounds, already converted from sounds -> to spectorgrams -> separated into train/ and test/ folders. All you need to do is 
-a) navigate to the data2 directory and run the runcmd to convert the data to TFRecords, and then 
+a) navigate to the data2 directory and run the runcmd to convert the data to TFRecords (or runcmd.2label.txt to include secondary labels for MTL), and then 
 b) go to the main project folder and run 
    prompt> python DCNSoundClass.py
