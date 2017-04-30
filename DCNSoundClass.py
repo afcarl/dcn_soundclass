@@ -6,6 +6,7 @@ import numpy as np
 import spectreader
 import os
 import time
+import math
 
 import pickle
 
@@ -79,7 +80,9 @@ FC_SIZE = FLAGS.fcsize
 
 k_downsampledHeight = 1			# default for freqs as channels
 if FLAGS.freqorientation == "height" :
-	k_downsampledHeight = k_height/4  #in case were using freqs as y dim, and conv layers = 2
+	# see https://www.tensorflow.org/api_guides/python/nn#convolution for calculating size from strides and padding
+	k_downsampledHeight = int(math.ceil(math.ceil(k_height/2.)/2.))#   k_height/4  #in case were using freqs as y dim, and conv layers = 2
+	print(':::::: k_downsampledHeight is ' + str(k_downsampledHeight))
 
 k_downsampledWidth = k_width/4 # no matter what the orientation - freqs as channels or as y dim
 k_convLayerOutputChannels = L2_CHANNELS
@@ -87,7 +90,7 @@ if (K_NUMCONVLAYERS == 1) :
 	k_downsampledWidth = k_width/2
 	k_convLayerOutputChannels = L1_CHANNELS
 	if FLAGS.freqorientation == "height" :
-		k_downsampledHeight = k_height/2 #in case were using freqs as y dim, and conv layers = 1
+		k_downsampledHeight = int(math.ceil(k_height/2.)) # k_height/2 #in case were using freqs as y dim, and conv layers = 1
 
 K_ConvRows=1      # default for freqs as channels
 if FLAGS.freqorientation == "height" :
@@ -259,11 +262,13 @@ if K_NUMCONVLAYERS == 2 :
 
 	with tf.name_scope ( "Conv_layers_out" ):
 		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name='h2_pooled')
+		print('k_downsampledWidth = ' + str(k_downsampledWidth) + ', k_downsampledHeight = ' + str(k_downsampledHeight) + ', L2_CHANNELS = ' + str(L2_CHANNELS))
+		print('requesting a reshape of size ' + str(k_downsampledWidth * k_downsampledHeight*L2_CHANNELS))
 		convlayers_output = tf.reshape(h2pooled, [-1, k_downsampledWidth * k_downsampledHeight*L2_CHANNELS]) # to prepare it for multiplication by W_fc1
 
 	#h2pooled is number of pixels / 2 / 2  (halved in size at each layer due to pooling)
 	# check our dimensions are a multiple of 4
-	if (k_width%4 or ((FLAGS.freqorientation == "height") and k_height%4 )):
+	if (k_width%4) : # or ((FLAGS.freqorientation == "height") and k_height%4 )):
 		print ('Error: width and height must be a multiple of 4')
 		sys.exit(1)
 else :
@@ -568,6 +573,9 @@ print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 print('OUTDIR: ' + str(OUTDIR))
 print('CHECKPOINTING: ' + str(CHECKPOINTING))
 print('     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv   ')
+print('TOTAL number of parameters in the model is ' + str(np.sum([np.product([xi.value for xi in x.get_shape()]) for x in tf.global_variables()])))
+print('     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv   ')
+
 #=============================================================================================
 # Do it
 trainModel()

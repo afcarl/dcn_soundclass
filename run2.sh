@@ -11,7 +11,7 @@ numconvlayers=2
 learningrate=.01
 optimizer=adam
 
-orientationArray=(channels)
+orientationArray=(channels) #(height)
 epsilonArray=(1.0)
 
 mtlArray=(16)

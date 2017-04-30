@@ -10,12 +10,12 @@ mkdir $maindir
 epsilon=1.0
 optimizer=adam
 learningrate=.01
-orientation=channels
+orientationArray=(height, channels)
 layers=2
-mtl=8
+mtl=16
 
-l1channelsArray=(16 128)
-l2channelsArray=(16 64)
+l1channelsArray=(32)
+l2channelsArray=(64)
 fcsizeArray=(32)
 
 for l1channels in ${l1channelsArray[@]}
