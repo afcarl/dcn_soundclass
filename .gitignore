@@ -5,6 +5,7 @@ scratch/
 old/
 checkpoints/*
 historicallogs/
+testout/
 log_graph/*
 save/
 output/

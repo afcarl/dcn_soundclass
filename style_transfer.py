@@ -201,17 +201,12 @@ def train(model, generated_image, initial_image):
     skip_step = 1
     with tf.Session() as sess:
         saver = tf.train.Saver()
-        ###############################
-        ## TO DO: 
-        ## 1. initialize your variables
-        ## 2. create writer to write your graph
         sess.run ( tf.global_variables_initializer ())
         print('initialize .....')
-
         writer = tf.summary.FileWriter(LOGDIR, sess.graph)
         ###############################
         print('Do initial run to assign image')
-        sess.run(model["X"].assign(initial_image))
+        sess.run(generated_image.assign(initial_image))
         if CHECKPOINTING :
             ckpt = tf.train.get_checkpoint_state(os.path.dirname(CHKPTDIR + '/checkpoint'))
         else :
@@ -226,25 +221,16 @@ def train(model, generated_image, initial_image):
             if index >= 5 and index < 20:
                 skip_step = 10
             elif index >= 20:
-                skip_step = 20
+                skip_step = 100
             
             sess.run(model['optimizer'])
             if (index + 1) % skip_step == 0:
                 ###############################
                 ## TO DO: obtain generated image and loss
                 # following the optimazaiton step, calculate loss
-
-                 # get the modified image
-                gen_image = sess.run(model["X"])
+                gen_image, total_loss, summary = sess.run([generated_image, model['total_loss'], 
+                                                             model['summary_op']])
                 
-                #Now create losses
-                print('now create losses')
-                model['content_loss'], model['style_loss'], model['total_loss'] = _create_losses(model, 
-                                                model["X"], content_image, style_image)
-                summary = sess.run(model['summary_op'])
-               
-               	# reassign the input to be the generated image from the last iteration
-                sess.run(model["X"].assign(gen_image))
                 ###############################
                 #gen_image = gen_image + MEAN_PIXELS
                 writer.add_summary(summary, global_step=index)
