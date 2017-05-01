@@ -26,12 +26,9 @@ k_width=856
 VERBOSE=0
 
 #------------------------------------------------------------
-K_ConvRows=1
-K_ConvCols=5
 
 k_height=1
-
-k_inputChannnels=k_freqbins
+k_inputChannels=k_freqbins
 
 k_ConvStrideRows=1
 k_ConvStrideCols=1
@@ -96,9 +93,9 @@ def constructSTModel(state) :
 
 	#This is the variable that we will "train" to match style and content images.
 	##g_graph["X"] = tf.Variable(np.zeros([1,k_width*k_freqbins]), dtype=tf.float32, name="s_x_image")
-	##g_graph["x_image"] = tf.reshape(g_graph["X"], [1,k_height,k_width,k_inputChannnels])
+	##g_graph["x_image"] = tf.reshape(g_graph["X"], [1,k_height,k_width,k_inputChannels])
 
-	g_graph["X"] = tf.Variable(np.zeros([1,k_height,k_width,k_inputChannnels]), dtype=tf.float32, name="s_X")
+	g_graph["X"] = tf.Variable(np.zeros([1,k_height,k_width,k_inputChannels]), dtype=tf.float32, name="s_X")
 	
 	g_graph["w1"]=tf.constant(state["w1:0"], name="s_w1")
 	g_graph["b1"]=tf.constant(state["b1:0"], name="s_b1")
