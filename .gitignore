@@ -9,6 +9,7 @@ testout/
 log_graph/*
 save/
 output/
+testmodel/
 styleout/
 data50/*/
 data50/validation-*
