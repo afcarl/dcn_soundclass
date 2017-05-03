@@ -48,7 +48,7 @@ FILETYPE = ".tif"
 # parameters to manage experiments
 STYLE = FLAGS.style
 CONTENT = FLAGS.content
-STYLE_IMAGE = 'styles/' + STYLE + FILETYPE
+STYLE_IMAGE = 'content/' + STYLE + FILETYPE
 CONTENT_IMAGE = 'content/' + CONTENT + FILETYPE
 IMAGE_HEIGHT = 1
 IMAGE_WIDTH = 856
