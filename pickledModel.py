@@ -39,7 +39,7 @@ k_poolStride = 1  # default for freqs as channels
 k_downsampledHeight = 1			# default for freqs as channels
 k_downsampledWidth = k_width/4 # no matter what the orientation - freqs as channels or as y dim
 
-L1_CHANNELS=32
+L1_CHANNELS=2048
 L2_CHANNELS=64
 FC_SIZE = 32
 
@@ -150,7 +150,7 @@ def load(pickleFile, randomize=0) :
 		print('randomizing weights')
 		for n in state.keys():
 			print('shape of state[' + n + '] is ' + str(state[n].shape))
-			state[n] = 2* np.random.random_sample(state[n].shape).astype(np.float32) -1
+			state[n] = .2* np.random.random_sample(state[n].shape).astype(np.float32) -.1
 
 	return constructSTModel(state)
 

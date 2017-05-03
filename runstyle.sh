@@ -6,45 +6,50 @@ DATE=`date +%Y.%m.%d`
 maindir=styleout/$DATE
 mkdir $maindir
 
-statefile=testmodel/1d/state.pickle
+statefile=testmodel/state.pickle
 iter=3000
-alpha=0
-beta=200
-noise=1.0
-randArray=(0)
+alpha=10
+betaArray=(80 200)
+noiseArray=(0 .5 1)
+randArray=(0 1)
 #contentArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
 #styleArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
-contentArray=(BeingRural5.0 agf5.0 Nancarrow5.0)
-styleArray=(BeingRural5.0 agf5.0 Nancarrow5.0)
+contentArray=(BeingRural5.0 roosters5.0)
+styleArray=(BeingRural5.0 roosters5.0)
 
-for  rand in ${randArray[@]}
+for noise in ${noiseArray[@]}
 do
-    for content in ${contentArray[@]}
-    do
-        for style in ${styleArray[@]}
-        do
+ for beta in ${betaArray[@]}
+ do
+  for  rand in ${randArray[@]}
+  do
+      for content in ${contentArray[@]}
+      do
+	  for style in ${styleArray[@]}
+	  do
 
-	    if [ "$style" == "$content" ]
-	    then
-	       continue
-	    fi
-           #make output dir for paramter settings                                                                                                                 \
-                                                                                                                                                                   
-            echo " -------       new batch run     --------"
+	      if [ "$style" == "$content" ]
+	      then
+		  continue
+	      fi
+	      #make output dir for paramter settings                                                                                                                 \
 
-            OUTDIR="$maindir/content_${content}.style_${style}.beta_${beta}.rand_${rand}"
-            mkdir $OUTDIR
-            echo "outdir is " $OUTDIR
+	      echo " -------       new batch run     --------"
 
-            #make subdirs for logging and checkpoints                                                                                                             \
-                                                                                                                                                                   
-            mkdir "$OUTDIR/log_graph"
-            mkdir "$OUTDIR/checkpoints"
+	      OUTDIR="$maindir/content_${content}.style_${style}.beta_${beta}.noise_${noise}.rand_${rand}"
+	      mkdir $OUTDIR
+	      echo "outdir is " $OUTDIR
 
-                        runcmd='python style_transfer.py --content ${content} --style ${style}  --noise ${noise} --outdir $OUTDIR '
-                        runcmd+='--stateFile ${statefile} --iter $iter --alpha ${alpha} --beta ${beta} --randomize ${rand}'
-                        eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
-        done
-    done
+	      #make subdirs for logging and checkpoints                                                                                                             \
+
+	      mkdir "$OUTDIR/log_graph"
+	      mkdir "$OUTDIR/checkpoints"
+
+	      runcmd='python style_transfer.py --content ${content} --style ${style}  --noise ${noise} --outdir $OUTDIR '
+	      runcmd+='--stateFile ${statefile} --iter $iter --alpha ${alpha} --beta ${beta} --randomize ${rand}'
+	      eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
+	  done
+      done
+  done
+ done
 done
-

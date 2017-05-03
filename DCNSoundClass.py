@@ -124,7 +124,7 @@ k_batchesPerLossReport= 4  #writes loss to the console every n batches
 # ------------------------------------------------------
 #Other non-data, non-model params
 CHECKPOINTING=FLAGS.checkpointing
-k_checkpointPeriod = 8  # in units of batches
+k_checkpointPeriod = FLAGS.checkpointPeriod  # in units of batches
 
 OUTDIR = FLAGS.outdir
 

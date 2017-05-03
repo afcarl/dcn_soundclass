@@ -10,12 +10,13 @@ mkdir $maindir
 epsilon=1.0
 optimizer=adam
 learningrate=.01
+orientationArray=(channels)
 orientation=channels
 layers=2
 mtl=16
 
-l1channelsArray=(16 32)
-l2channelsArray=(32 64)
+l1channelsArray=(2048)
+l2channelsArray=(64)
 fcsizeArray=(32)
 
 for l1channels in ${l1channelsArray[@]}
@@ -39,8 +40,8 @@ do
             mkdir "$OUTDIR/checkpoints"
             mkdir "$OUTDIR/stderr"
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
-            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 1000  '
-            runcmd+='--numClasses 50 --batchsize 20 --n_epochs 200 --learning_rate ${learningrate}  '
+            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  '
+            runcmd+='--numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
             runcmd+='--keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+='--numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
                         # direct stdout and sterr from each run into their proper directories, but tww so we can still watch                                                     
