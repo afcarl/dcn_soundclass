@@ -9,20 +9,18 @@ mkdir $maindir
 statefile=testmodel/state.pickle
 iter=3000
 alpha=10
-betaArray=(80 200)
-noiseArray=(0 .5 1)
-randArray=(0 1)
+betaArray=(10 50)
+noiseArray=(.2 .5)
+rand=0
 #contentArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
 #styleArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
-contentArray=(BeingRural5.0 roosters5.0)
-styleArray=(BeingRural5.0 roosters5.0)
+contentArray=(roosters5.0 CrowdLaughing5.0 sheepfarm5.0 AngryCrowd5.0)
+styleArray=(roosters5.0 CrowdLaughing5.0 sheepfarm5.0 AngryCrowd5.0)
 
 for noise in ${noiseArray[@]}
 do
  for beta in ${betaArray[@]}
  do
-  for  rand in ${randArray[@]}
-  do
       for content in ${contentArray[@]}
       do
 	  for style in ${styleArray[@]}
@@ -32,15 +30,13 @@ do
 	      then
 		  continue
 	      fi
-	      #make output dir for paramter settings                                                                                                                 \
-
+	      #make output dir for paramter settings                                                                                                        
 	      echo " -------       new batch run     --------"
-
-	      OUTDIR="$maindir/content_${content}.style_${style}.beta_${beta}.noise_${noise}.rand_${rand}"
+	      OUTDIR="$maindir/content_${content}.style_${style}.beta_${beta}.noise_${noise}"
 	      mkdir $OUTDIR
 	      echo "outdir is " $OUTDIR
 
-	      #make subdirs for logging and checkpoints                                                                                                             \
+	      #make subdirs for logging and checkpoints                                                                                                     
 
 	      mkdir "$OUTDIR/log_graph"
 	      mkdir "$OUTDIR/checkpoints"
@@ -50,6 +46,5 @@ do
 	      eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
 	  done
       done
-  done
  done
 done
