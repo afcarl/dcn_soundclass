@@ -217,6 +217,7 @@ def train(model, generated_image, initial_image):
         initial_step = model['global_step'].eval()
         
         start_time = time.time()
+        step_time=start_time
         for index in range(initial_step, ITERS):
             if index >= 5 and index < 20:
                 skip_step = 10
@@ -236,8 +237,8 @@ def train(model, generated_image, initial_image):
                 writer.add_summary(summary, global_step=index)
                 print('Step {}\n   Sum: {:5.1f}'.format(index + 1, np.sum(gen_image)))
                 print('   Loss: {:5.1f}'.format(sess.run(model['total_loss']))) #???????
-                print('   Time: {}'.format(time.time() - start_time))
-                start_time = time.time()
+                print('   Time: {}'.format(time.time() - step_time))
+                step_time = time.time()
 
                 filename = OUTPUTDIR + '/%d.tif' % (index)
                 pickledModel.save_image(np.transpose(gen_image[0][0]), filename)
@@ -245,6 +246,7 @@ def train(model, generated_image, initial_image):
                 if (index + 1) % 20 == 0:
                     saver.save(sess, CHKPTDIR + '/style_transfer', index)
 
+        print('   TOTAL Time: {}'.format(time.time() - start_time))
         writer.close()
 
 #-----------------------------------
