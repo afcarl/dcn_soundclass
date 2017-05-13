@@ -67,7 +67,11 @@ def save_image(image, fname, scaleinfo=None):
 	print('image max is ' + str(np.amax(image) ))
 	print('image min is ' + str(np.amin(image) ))
 	# Output should add back the mean pixels we subtracted at the beginning
-	image = np.clip(image, 0, 255).astype('uint8')
+
+	# [0,80db] -> [0, 255]
+	# after style transfer, images range outside of [0,255].
+	# To preserve scale, and mask low values, we shift by (255-max), then clip at 0 and then have all bins in the top 80dB.
+	image = np.clip(image-np.amax(image)+255, 0, 255).astype('uint8')
 
 	info = TiffImagePlugin.ImageFileDirectory()
     
