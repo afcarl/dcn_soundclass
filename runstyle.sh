@@ -9,13 +9,13 @@ mkdir $maindir
 statefile=testmodel/state.pickle
 iter=3000
 alpha=10
-betaArray=(10 50)
-noiseArray=(.2 .5)
+betaArray=(2 10)
+noiseArray=(.2 .7)
 rand=0
 #contentArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
 #styleArray=(BeingRural5.0 agf5.0 Superstylin5.0 roosters5.0 Nancarrow5.0 Toys5.0 inc5.0 sheepfarm5.0)
-contentArray=(roosters5.0 CrowdLaughing5.0 sheepfarm5.0 AngryCrowd5.0)
-styleArray=(roosters5.0 CrowdLaughing5.0 sheepfarm5.0 AngryCrowd5.0)
+contentArray=(Superstylin5.0 agf5.0 wavenetbabble5.0 Toys5.0 inc5.0 Nancarrow5.0)
+styleArray=(Superstylin5.0 agf5.0 wavenetbabble5.0 Toys5.0 inc5.0 Nancarrow5.0)
 
 for noise in ${noiseArray[@]}
 do
