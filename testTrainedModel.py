@@ -111,6 +111,8 @@ rimages=soundfileBatch(['data2/validate/205 - Chirping birds/5-242490-A._11_.tif
 #	foo = sess.run(Y, feed_dict={Z: rimage})
 print(' here we go ........')
 
+np.set_printoptions(precision=2)
+np.set_printoptions(suppress=True)
 
 with tf.Session() as sess:
 	#sess.run ( tf.global_variables_initializer ())

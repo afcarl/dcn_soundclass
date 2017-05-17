@@ -32,7 +32,7 @@ do
             mkdir "$OUTDIR/log_graph"
             mkdir "$OUTDIR/checkpoints"
             # wrap python call in a string so we can do our fancy redirecting below
-            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 0 --checkpointPeriod 1000  '
+            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 1  '
             runcmd+='--numClasses 2 --batchsize 20 --n_epochs 10 --learning_rate ${learningrate}  --keepProb .5 '
             runcmd+='--l1channels 32 --l2channels 16 --fcsize 32 --freqorientation ${orientation}  '
             runcmd+='--adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'

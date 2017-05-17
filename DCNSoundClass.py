@@ -8,7 +8,7 @@ import os
 import time
 import math
 
-import pickle
+import pickledModel
 
 # get args from command line
 import argparse
@@ -43,16 +43,18 @@ parser.add_argument('--mtlnumclasses', type=int, help='if nonzero, train using s
 FLAGS, unparsed = parser.parse_known_args()
 print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
+
+
 #HARD-CODED data-dependant parameters ------------------
 #dimensions of image (pixels)
 k_freqbins=257
 
 k_height=1						# default for freqs as channels
-k_inputChannnels=k_freqbins		# default for freqs as channels
+k_inputChannels=k_freqbins		# default for freqs as channels
 
 if FLAGS.freqorientation == "height" :
 	k_height=k_freqbins
-	k_inputChannnels=1
+	k_inputChannels=1
 
 k_width=856
 
@@ -121,6 +123,25 @@ print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of '
 
 k_batchesPerLossReport= 4  #writes loss to the console every n batches
 
+# Create list of paramters for serializing so that network can be properly reconstructed
+parameters={
+	'k_height' : k_height, 
+	'k_width' : k_width, 
+	'k_inputChannels' : k_inputChannels, 
+	'K_NUMCONVLAYERS' : K_NUMCONVLAYERS, 
+	'L1_CHANNELS' : L1_CHANNELS, 
+	'L2_CHANNELS' : L2_CHANNELS, 
+	'FC_SIZE' : FC_SIZE, 
+	'K_ConvRows' : K_ConvRows, 
+	'K_ConvCols' : K_ConvCols, 
+	'k_ConvStrideRows' : k_ConvStrideRows, 
+	'k_ConvStrideCols' : k_ConvStrideCols, 
+	'k_poolRows' : k_poolRows, 
+	'k_poolStride' : k_poolStride, 
+	'k_downsampledHeight' : k_downsampledHeight, 
+	'k_downsampledWidth' : k_downsampledWidth,
+	'freqorientation' : FLAGS.freqorientation
+}
 # ------------------------------------------------------
 #Other non-data, non-model params
 CHECKPOINTING=FLAGS.checkpointing
@@ -169,11 +190,7 @@ def get_datafiles(a_dir, startswith):
     return  [a_dir + '/' + name for name in os.listdir(a_dir)
             if name.startswith(startswith)]
 
-def saveState(sess, vlist, fname) :
-	state={}
-	for v in vlist :
-		state[v.name] = sess.run(v)
-	pickle.dump(state, open( fname, "wb" ))
+
 
 
 #=============================================
@@ -227,7 +244,7 @@ vimageBatch, vlabelBatch = tf.train.batch(
 X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
 
 if FLAGS.freqorientation == "height" :
-	x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannnels]) 
+	x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannels]) 
 else :
 	print('set up reshaping for freqbins as channels')
 	foo1 = tf.reshape(X, [-1,k_freqbins,k_width,1]) #unflatten (could skip this step if it wasn't flattenned in the first place!)
@@ -242,7 +259,7 @@ trainable=[]
 #Layer 1
 # 1 input channel, L1_CHANNELS output channels
 
-w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannnels, L1_CHANNELS], stddev=0.1), name="w1")
+w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1, name="h1")
 # 2x2 max pooling
@@ -504,7 +521,7 @@ def trainModel():
 			# So how, finally?
 			print('ok, let\'s validate now that we\'ve run ' + str(batchcount) + 'batches  ------------------------------')
 
-			vsummary=validate(sess)
+			vsummary=validate(sess, True)
 			writer.add_summary(vsummary, global_step=batchcount+1)
 
 
@@ -526,17 +543,17 @@ def trainModel():
 
 		print(' now save meta model')
 		meta_graph_def = tf.train.export_meta_graph(filename=OUTDIR + '/my-model.meta')
-		saveState(sess, trainable, OUTDIR + '/state.pickle') 
+		pickledModel.saveState(sess, trainable, parameters, OUTDIR + '/state.pickle') 
 
 		print(' ===============================================================') 
 
 #=============================================================================================
 print(' ---- Actual parameters for this run ----')
-#FLAGS.freqorientation, k_height, k_width, k_inputChannnels
+#FLAGS.freqorientation, k_height, k_width, k_inputChannels
 print('FLAGS.freqorientation: ' + str(FLAGS.freqorientation) 
 	+ ',   ' + 'k_height: ' + str(k_height) 
 	+ ',   ' + 'k_width: ' + str(k_width) 
-	+ ',   ' + 'k_inputChannnels: ' + str(k_inputChannnels))
+	+ ',   ' + 'k_inputChannels: ' + str(k_inputChannels))
 #k_numClasses, validationSamples, trainingSamples
 print('k_numClasses: ' + str(k_numClasses)
 	+ ',   ' + 'validationSamples: ' + str(validationSamples)

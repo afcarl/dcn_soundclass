@@ -17,10 +17,6 @@ g_st_saver=None
 g_chkptdir=None
 g_trainedgraph=None
 
-
-k_freqbins=257
-k_width=856
-
 VERBOSE=1
 
 

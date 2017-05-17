@@ -50,9 +50,7 @@ STYLE = FLAGS.style
 CONTENT = FLAGS.content
 STYLE_IMAGE = 'content/' + STYLE + FILETYPE
 CONTENT_IMAGE = 'content/' + CONTENT + FILETYPE
-IMAGE_HEIGHT = 1
-IMAGE_WIDTH = 856
-IMAGE_CHANNELS = 257
+
   # This seems to be the paramter that really controls the balance between content and style
   # The more noise, the less content
 NOISE_RATIO = FLAGS.noise # percentage of weight of the noise for intermixing with the content image
@@ -241,7 +239,9 @@ def train(model, generated_image, initial_image):
                 step_time = time.time()
 
                 filename = OUTPUTDIR + '/%d.tif' % (index)
-                pickledModel.save_image(np.transpose(gen_image[0][0]), filename)
+                #pickledModel.save_image(np.transpose(gen_image[0][0]), filename)
+                print('style_transfer: about to save image with shape ' + str(gen_image.shape))
+                pickledModel.save_image(gen_image[0], filename)
 
                 if (index + 1) % 20 == 0:
                     saver.save(sess, CHKPTDIR + '/style_transfer', index)
@@ -280,7 +280,7 @@ model['optimizer'] =  tf.train.AdamOptimizer(LR).minimize(model['total_loss'], v
 ###############################
 model['summary_op'] = _create_summary(model)
 
-initial_image = pickledModel.generate_noise_image(content_image, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS, NOISE_RATIO)
+initial_image = pickledModel.generate_noise_image(content_image, NOISE_RATIO)
 #def train(model, generated_image, initial_image):
 train(model, model["X"], initial_image)
 
