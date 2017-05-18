@@ -590,9 +590,11 @@ print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 print('OUTDIR: ' + str(OUTDIR))
 print('CHECKPOINTING: ' + str(CHECKPOINTING))
 print('     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv   ')
-print('TOTAL number of parameters in the model is ' + str(np.sum([np.product([xi.value for xi in x.get_shape()]) for x in tf.global_variables()])))
+for x in trainable :
+	print(x.name + ' : ' + str(x.get_shape()))
+print('TOTAL number of parameters in the model is ' + str(np.sum([np.product([xi.value for xi in x.get_shape()]) for x in trainable])))
 print('     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv   ')
 
 #=============================================================================================
 # Do it
-trainModel()
+#trainModel()

@@ -11,7 +11,7 @@ numconvlayers=2
 learningrate=.01
 optimizer=adam
 
-orientationArray=(height) #(height)
+orientationArray=(channels) #(height)
 epsilonArray=(1.0)
 
 mtlArray=(16)
@@ -33,8 +33,8 @@ do
             mkdir "$OUTDIR/checkpoints"
             # wrap python call in a string so we can do our fancy redirecting below
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 1  '
-            runcmd+='--numClasses 2 --batchsize 20 --n_epochs 10 --learning_rate ${learningrate}  --keepProb .5 '
-            runcmd+='--l1channels 32 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  '
+            runcmd+='--numClasses 50 --batchsize 20 --n_epochs 10 --learning_rate ${learningrate}  --keepProb .5 '
+            runcmd+='--l1channels 2048 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  '
             runcmd+='--adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'
 			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch
         	eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
