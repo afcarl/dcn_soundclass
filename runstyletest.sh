@@ -4,11 +4,11 @@
 source activate tflow2
 
 statefile=logs.2017.05.14/mtl_16.or_height.epsilon_1.0/state.pickle
-iter=600
+iter=200
 
 noise=.2
 rand=0
 content=BeingRural5.0
 style=agf5.0
 
-python style_transfer.py --content ${content} --style ${style}  --noise ${noise} --outdir testout  --stateFile ${statefile} --iter $iter --alpha 10 --beta 10 --randomize ${rand}
+python style_transfer.py --weightDecay 0 --content ${content} --style ${style}  --noise ${noise} --outdir testout  --stateFile ${statefile} --iter $iter --alpha 10 --beta 10 --randomize ${rand}

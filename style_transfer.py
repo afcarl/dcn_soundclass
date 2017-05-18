@@ -30,6 +30,7 @@ parser.add_argument('--iter', type=int, help='number of iterations (on cpu, runt
 parser.add_argument('--alpha', type=float, help='amount to weight conent', default=10  ) 
 parser.add_argument('--beta', type=float, help='amount to weight style', default=200  ) 
 parser.add_argument('--randomize', type=int, help='0: use trained weights, 1: randomize model weights', choices=[0,1], default=0 ) 
+parser.add_argument('--weightDecay', type=float, help='factor for L2 loss to keep vals in [0,255]',  default=.01 ) 
 
 parser.add_argument('--outdir', type=str, help='for output images', default="." ) 
 parser.add_argument('--stateFile', type=str, help='stored graph', default=None  ) 
@@ -72,6 +73,15 @@ OUTPUTDIR = FLAGS.outdir
 
 ITERS = FLAGS.iter
 LR = 2.0
+
+WEIGHT_DECAY=FLAGS.weightDecay
+
+def _create_range_loss(im) : 
+    over = tf.maximum(im-255, 0)
+    under = tf.minimum(im, 0)
+    out = tf.add(over, under)
+    rangeloss = WEIGHT_DECAY*tf.nn.l2_loss(out)
+    return rangeloss
 
 
 def _create_content_loss(p, f):
@@ -171,10 +181,12 @@ def _create_losses(model, input_image, content_image, style_image):
             A = sess.run([model[layer_name] for layer_name in STYLE_LAYERS])                              
         style_loss = _create_style_loss(A, model)
 
+        reg_loss = _create_range_loss(model['X'])
+
         ##########################################
         ## TO DO: create total loss. 
         ## Hint: don't forget the content loss and style loss weights
-        total_loss = ALPHA*content_loss + BETA*style_loss
+        total_loss = ALPHA*content_loss + BETA*style_loss + reg_loss
         ##########################################
 
     return content_loss, style_loss, total_loss
