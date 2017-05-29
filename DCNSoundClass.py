@@ -37,6 +37,8 @@ parser.add_argument('--fcsize', type=int, help='Dimension of the final fully-con
 parser.add_argument('--optimizer', type=str, help='optimizer', choices=["adam","gd"], default="gd") #default for testing
 parser.add_argument('--adamepsilon', type=float, help='epsilon param for adam optimizer', default=.1) 
 
+parser.add_argument('--learnCondition', type=str, help='when to learn', choices=["always","whenWrong"], default="always") #default for testing
+
 parser.add_argument('--mtlnumclasses', type=int, help='if nonzero, train using secondary classes (which must be stored in TFRecord files', default=0)
 
 
@@ -115,15 +117,17 @@ k_keepProb=FLAGS.keepProb
 k_OPTIMIZER=FLAGS.optimizer
 k_adamepsilon = FLAGS.adamepsilon
 
+LEARNCONDITION = FLAGS.learnCondition
+
 # ------------------------------------------------------
 # Derived parameters for convenience (do not change these)
 k_vbatchsize = min(validationSamples, k_batchsize)
 k_numVBatches = validationSamples/k_vbatchsize
 print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize) + ' datasamples')
 
-k_batchesPerLossReport= 4  #writes loss to the console every n batches
+k_batchesPerLossReport= 20  #writes loss to the console every n batches
 
-# Create list of paramters for serializing so that network can be properly reconstructed
+# Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
 	'k_height' : k_height, 
 	'k_width' : k_width, 
@@ -328,7 +332,20 @@ if k_mtlnumclasses :
 
 # Step 5: define loss function
 # use cross entropy loss of the real labels with the softmax of logits
-summaryloss_primary = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
+# returns a 1D tensor of length batchsize
+if LEARNCONDITION=="whenWrong" :
+	summaryloss_primary_raw = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
+
+	smpreds = tf.nn.softmax(logits=logits, name="softmax_preds")
+	# argmax returns a batchsize tensor  of type int64, batchsize tensor of booleans
+	# equal returns a batchsize tensor of type boolean
+	wrong_preds = tf.not_equal(tf.argmax(smpreds, 1), tf.argmax(Y, 1))
+	# ones where labe != max of softmax, tensor of length batchsize
+	wrongMask = tf.cast(wrong_preds, tf.float32) # need numpy.count_nonzero(boolarr) :(
+	summaryloss_primary = tf.multiply(summaryloss_primary_raw, wrongMask, name="wrongloss")
+else :
+	summaryloss_primary = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)
+
 meanloss_primary = tf.reduce_mean(summaryloss_primary)
 
 
@@ -363,6 +380,8 @@ assert(optimizer)
 # The nodes are used for running the validation data and getting accuracy scores from the logits
 with tf.name_scope("VALIDATION"):
 	softmax_preds = tf.nn.softmax(logits=logits, name="softmax_preds")
+	# argmax returns a batchsize tensor  of type int64, batchsize tensor of booleans
+	# equal returns a batchsize tensor of type boolean
 	correct_preds = tf.equal(tf.argmax(softmax_preds, 1), tf.argmax(Y, 1))
 	batchNumCorrect = tf.reduce_sum(tf.cast(correct_preds, tf.float32)) # need numpy.count_nonzero(boolarr) :(
 
@@ -584,6 +603,8 @@ if (k_OPTIMIZER == "adam") :
 	+ ',   ' + 'k_adamepsilon: ' + str(k_adamepsilon))
 else :
 	print('k_OPTIMIZER: ' + str(k_OPTIMIZER))
+
+print('LEARNCONDITION: ' + LEARNCONDITION)
 print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 
 #OUTDIR
@@ -597,4 +618,4 @@ print('     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv   ')
 
 #=============================================================================================
 # Do it
-#trainModel()
+trainModel()
