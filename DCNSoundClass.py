@@ -112,10 +112,10 @@ k_ConvStrideRows=1
 k_ConvStrideCols=1
 
 k_poolRows = 1    # default for freqs as channels
-k_poolStride = 1  # default for freqs as channels
+k_poolStrideRows = 1  # default for freqs as channels
 if FLAGS.freqorientation == "height" :
 	k_poolRows = 2
-	k_poolStride = 2 
+	k_poolStrideRows = 2 
 
 
 
@@ -148,7 +148,7 @@ parameters={
 	'k_ConvStrideRows' : k_ConvStrideRows, 
 	'k_ConvStrideCols' : k_ConvStrideCols, 
 	'k_poolRows' : k_poolRows, 
-	'k_poolStride' : k_poolStride, 
+	'k_poolStrideRows' : k_poolStrideRows, 
 	'k_downsampledHeight' : k_downsampledHeight, 
 	'k_downsampledWidth' : k_downsampledWidth,
 	'freqorientation' : FLAGS.freqorientation
@@ -275,7 +275,7 @@ w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1, name="h1")
 # 2x2 max pooling
-h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME')
+h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
 
 trainable.extend([w1, b1]) 
 
@@ -290,7 +290,7 @@ if K_NUMCONVLAYERS == 2 :
 	trainable.extend([w2, b2]) 
 
 	with tf.name_scope ( "Conv_layers_out" ):
-		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStride, 2, 1], padding='SAME', name='h2_pooled')
+		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME', name='h2_pooled')
 		print('k_downsampledWidth = ' + str(k_downsampledWidth) + ', k_downsampledHeight = ' + str(k_downsampledHeight) + ', L2_CHANNELS = ' + str(L2_CHANNELS))
 		print('requesting a reshape of size ' + str(k_downsampledWidth * k_downsampledHeight*L2_CHANNELS))
 		convlayers_output = tf.reshape(h2pooled, [-1, k_downsampledWidth * k_downsampledHeight*L2_CHANNELS]) # to prepare it for multiplication by W_fc1
@@ -602,13 +602,13 @@ print('K_NUMCONVLAYERS: ' + str(K_NUMCONVLAYERS)
 print('k_downsampledHeight: ' + str(k_downsampledHeight)
 	+ ',   ' + 'k_downsampledWidth: ' + str(k_downsampledWidth)
 	+ ',   ' + 'k_convLayerOutputChannels: ' + str(k_convLayerOutputChannels))
-#K_ConvRows, K_ConvCols, k_ConvStrideRows, k_ConvStrideCols, k_poolRows, k_poolStride 
+#K_ConvRows, K_ConvCols, k_ConvStrideRows, k_ConvStrideCols, k_poolRows, k_poolStrideRows 
 print('K_ConvRows: ' + str(K_ConvRows)
 	+ ',   ' + 'K_ConvCols: ' + str(K_ConvCols)
 	+ ',   ' + 'k_ConvStrideRows: ' + str(k_ConvStrideRows)
 	+ ',   ' + 'k_ConvStrideCols: ' + str(k_ConvStrideCols)
 	+ ',   ' + 'k_poolRows: ' + str(k_poolRows)
-	+ ',   ' + 'k_poolStride : ' + str(k_poolStride ))
+	+ ',   ' + 'k_poolStrideRows : ' + str(k_poolStrideRows ))
 if (k_OPTIMIZER == "adam") : 
 	print('k_OPTIMIZER: ' + str(k_OPTIMIZER)
 	+ ',   ' + 'k_adamepsilon: ' + str(k_adamepsilon))
