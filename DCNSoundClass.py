@@ -100,6 +100,9 @@ if (K_NUMCONVLAYERS == 1) :
 	if FLAGS.freqorientation == "height" :
 		k_downsampledHeight = int(math.ceil(k_height/2.)) # k_height/2 #in case were using freqs as y dim, and conv layers = 1
 
+print(':::::: k_downsampledHeight is ' + str(k_downsampledHeight))
+print(':::::: k_downsampledWidth is ' + str(k_downsampledWidth))
+
 K_ConvRows=1      # default for freqs as channels
 if FLAGS.freqorientation == "height" :
 	K_ConvRows=5
