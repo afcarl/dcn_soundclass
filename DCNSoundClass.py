@@ -542,7 +542,7 @@ def trainModel():
 			# So how, finally?
 			print('ok, let\'s validate now that we\'ve run ' + str(batchcount) + 'batches  ------------------------------')
 
-			vsummary=validate(sess, True)
+			vsummary=validate(sess, False)
 			writer.add_summary(vsummary, global_step=batchcount+1)
 
 
