@@ -4,7 +4,17 @@
 # Individual logs will also still get stored in their respective directories                                                                                                    
 source activate tflow2
 DATE=`date +%Y.%m.%d`
-maindir=logs.$DATE
+echo $DATE
+#maindir=logs.$DATE
+#mkdir $maindir
+
+if [ $# -eq 0 ]
+  then
+    echo "please supply output directory as a command line argument"
+    exit
+fi
+
+maindir=$1
 mkdir $maindir
 
 epsilon=1.0
