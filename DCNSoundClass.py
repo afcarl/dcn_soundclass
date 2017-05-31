@@ -16,6 +16,7 @@ FLAGS = None
 # ------------------------------------------------------
 # get any args provided on the command line
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--indir', type=str, help='directory holding TFRecords of data',  default='.') 
 parser.add_argument('--outdir', type=str, help='output directory for logging',  default='.') 
 parser.add_argument('--numClasses', type=int, help='number of classes in data', choices=[2,50], default=2) #default for testing
 parser.add_argument('--checkpointing', type=int, help='0/1 - used for both saving and starting from checkpoints', choices=[0,1], default=0)
@@ -151,6 +152,7 @@ parameters={
 CHECKPOINTING=FLAGS.checkpointing
 k_checkpointPeriod = FLAGS.checkpointPeriod  # in units of batches
 
+INDIR = FLAGS.indir
 OUTDIR = FLAGS.outdir
 
 CHKPOINTDIR = OUTDIR + '/checkpoints' # create folder manually
@@ -203,7 +205,7 @@ def get_datafiles(a_dir, startswith):
 # getImage reads data for enqueueing shufflebatch, shufflebatch manages it's own dequeing 
 # ---- First set up the graph for the TRAINING DATA
 if k_mtlnumclasses : 
-	target, data, mtltargets = getImage(get_datafiles('data'+ str(k_numClasses), 'train-'), nepochs=n_epochs, mtlclasses=k_mtlnumclasses)
+	target, data, mtltargets = getImage(get_datafiles(INDIR, 'train-'), nepochs=n_epochs, mtlclasses=k_mtlnumclasses)
 	imageBatch, labelBatch, mtltargetBatch = tf.train.shuffle_batch(
 	    [data, target, mtltargets], batch_size=k_batchsize,
 	    num_threads=NUM_THREADS,
@@ -212,7 +214,7 @@ if k_mtlnumclasses :
 	    capacity=1000,  #1000,
 	    min_after_dequeue=500) #500
 else :
-	target, data  = getImage(get_datafiles('data'+ str(k_numClasses), 'train-'), n_epochs)
+	target, data  = getImage(get_datafiles(INDIR, 'train-'), n_epochs)
 	imageBatch, labelBatch = tf.train.shuffle_batch(
 	    [data, target], batch_size=k_batchsize,
 	    num_threads=NUM_THREADS,
@@ -224,7 +226,7 @@ else :
 
 # ---- same for the VALIDATION DATA
 # no need for mtl labels for validation
-vtarget, vdata = getImage(get_datafiles('data'+ str(k_numClasses), 'validation-')) # one "epoch" for validation
+vtarget, vdata = getImage(get_datafiles(INDIR, 'validation-')) # one "epoch" for validation
 
 #vimageBatch, vlabelBatch = tf.train.shuffle_batch(
 #    [vdata, vtarget], batch_size=k_vbatchsize,
@@ -568,6 +570,7 @@ def trainModel():
 
 #=============================================================================================
 print(' ---- Actual parameters for this run ----')
+print('INDIR : ' + INDIR)
 #FLAGS.freqorientation, k_height, k_width, k_inputChannels
 print('FLAGS.freqorientation: ' + str(FLAGS.freqorientation) 
 	+ ',   ' + 'k_height: ' + str(k_height) 
