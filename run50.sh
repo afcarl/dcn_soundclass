@@ -10,24 +10,34 @@ mkdir $maindir
 epsilon=1.0
 optimizer=adam
 learningrate=.01
-orientationArray=(channels)
-orientation=channels
+orientationArray=(height channels)
 layers=2
-mtl=16
+mtl=0
 
-l1channelsArray=(2048)
+indir=data50
+
+l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
 fcsizeArray=(32)
 
-for l1channels in ${l1channelsArray[@]}
+for orientation in ${orientationArray[@]}
 do
+    if [ "$orientation" == "channels" ]
+    then
+	l1channels=2048
+    else
+	l1channels=32
+    fi
+    echo "l1 channels is  $l1channels"
+
+
     for l2channels in ${l2channelsArray[@]}
     do
         for fcsize in ${fcsizeArray[@]}
         do
             #make output dir for paramter settings                                                                                                                               
             echo " -------       new batch run     --------"
-            OUTDIR="$maindir/l1r_${l1channels}.l2_${l2channels}.fc_${fcsize}"
+            OUTDIR="$maindir/l1r_${l1channels}.l2_${l2channels}.fc_${fcsize}.or_${orientation}"
             mkdir $OUTDIR
             echo "outdir is " $OUTDIR
 
@@ -40,7 +50,7 @@ do
             mkdir "$OUTDIR/checkpoints"
             mkdir "$OUTDIR/stderr"
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
-            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  '
+            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
             runcmd+='--numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
             runcmd+='--keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+='--numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
