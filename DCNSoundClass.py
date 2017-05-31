@@ -22,6 +22,9 @@ parser.add_argument('--numClasses', type=int, help='number of classes in data', 
 parser.add_argument('--checkpointing', type=int, help='0/1 - used for both saving and starting from checkpoints', choices=[0,1], default=0)
 parser.add_argument('--checkpointPeriod', type=int, help='checkpoint every n batches', default=8) 
 
+parser.add_argument('--freqbins', type=int, help='number of frequency bins in the spectrogram input', default=513) 
+parser.add_argument('--numFrames', type=int, help='number of frames in the spectrogram input (must be divisible by 4)', default=424) 
+
 parser.add_argument('--learning_rate', type=float, help='learning rate', default=.001) 
 parser.add_argument('--batchsize', type=int, help='number of data records per training batch', default=8) #default for testing
 parser.add_argument('--n_epochs', type=int, help='number of epochs to use for training', default=2) #default for testing
@@ -50,7 +53,7 @@ print('\n FLAGS parsed :  {0}'.format(FLAGS))
 
 #HARD-CODED data-dependant parameters ------------------
 #dimensions of image (pixels)
-k_freqbins=257
+k_freqbins=FLAGS.freqbins
 
 k_height=1						# default for freqs as channels
 k_inputChannels=k_freqbins		# default for freqs as channels
@@ -59,7 +62,7 @@ if FLAGS.freqorientation == "height" :
 	k_height=k_freqbins
 	k_inputChannels=1
 
-k_width=856
+k_numFrames=FLAGS.numFrames
 
 #number of samples for training and validation
 k_numClasses=FLAGS.numClasses  #determines wether to read mini data set in data2 or full dataset in data50
@@ -89,10 +92,10 @@ if FLAGS.freqorientation == "height" :
 	k_downsampledHeight = int(math.ceil(math.ceil(k_height/2.)/2.))#   k_height/4  #in case were using freqs as y dim, and conv layers = 2
 	print(':::::: k_downsampledHeight is ' + str(k_downsampledHeight))
 
-k_downsampledWidth = k_width/4 # no matter what the orientation - freqs as channels or as y dim
+k_downsampledWidth = k_numFrames/4 # no matter what the orientation - freqs as channels or as y dim
 k_convLayerOutputChannels = L2_CHANNELS
 if (K_NUMCONVLAYERS == 1) :
-	k_downsampledWidth = k_width/2
+	k_downsampledWidth = k_numFrames/2
 	k_convLayerOutputChannels = L1_CHANNELS
 	if FLAGS.freqorientation == "height" :
 		k_downsampledHeight = int(math.ceil(k_height/2.)) # k_height/2 #in case were using freqs as y dim, and conv layers = 1
@@ -131,7 +134,7 @@ k_batchesPerLossReport= 20  #writes loss to the console every n batches
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
 	'k_height' : k_height, 
-	'k_width' : k_width, 
+	'k_numFrames' : k_numFrames, 
 	'k_inputChannels' : k_inputChannels, 
 	'K_NUMCONVLAYERS' : K_NUMCONVLAYERS, 
 	'L1_CHANNELS' : L1_CHANNELS, 
@@ -176,7 +179,7 @@ def getImage(fnames, nepochs=None, mtlclasses=0) :
 
     #same as np.flatten
     # I can't seem to make shuffle batch work on images in their native shapes.
-    image=tf.reshape(image,[k_freqbins*k_width])
+    image=tf.reshape(image,[k_freqbins*k_numFrames])
 
     # re-define label as a "one-hot" vector 
     # it will be [0,1] or [1,0] here. 
@@ -246,14 +249,14 @@ vimageBatch, vlabelBatch = tf.train.batch(
 # Step 2: create placeholders for features (X) and labels (Y)
 # each lable is one hot vector.
 # 'None' here allows us to fill the placeholders with different size batches (which we do with training and validation batches)
-#X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
-X = tf.placeholder(tf.float32, [None,k_freqbins*k_width], name= "X")
+#X = tf.placeholder(tf.float32, [None,k_freqbins*k_numFrames], name= "X")
+X = tf.placeholder(tf.float32, [None,k_freqbins*k_numFrames], name= "X")
 
 if FLAGS.freqorientation == "height" :
-	x_image = tf.reshape(X, [-1,k_height,k_width,k_inputChannels]) 
+	x_image = tf.reshape(X, [-1,k_height,k_numFrames,k_inputChannels]) 
 else :
 	print('set up reshaping for freqbins as channels')
-	foo1 = tf.reshape(X, [-1,k_freqbins,k_width,1]) #unflatten (could skip this step if it wasn't flattenned in the first place!)
+	foo1 = tf.reshape(X, [-1,k_freqbins,k_numFrames,1]) #unflatten (could skip this step if it wasn't flattenned in the first place!)
 	x_image = tf.transpose(foo1, perm=[0,3,2,1]) #moves freqbins from height to channel dimension
 
 Y = tf.placeholder(tf.float32, [None,k_numClasses], name= "Y")  #labeled classes, one-hot
@@ -291,7 +294,7 @@ if K_NUMCONVLAYERS == 2 :
 
 	#h2pooled is number of pixels / 2 / 2  (halved in size at each layer due to pooling)
 	# check our dimensions are a multiple of 4
-	if (k_width%4) : # or ((FLAGS.freqorientation == "height") and k_height%4 )):
+	if (k_numFrames%4) : # or ((FLAGS.freqorientation == "height") and k_height%4 )):
 		print ('Error: width and height must be a multiple of 4')
 		sys.exit(1)
 else :
@@ -571,10 +574,12 @@ def trainModel():
 #=============================================================================================
 print(' ---- Actual parameters for this run ----')
 print('INDIR : ' + INDIR)
-#FLAGS.freqorientation, k_height, k_width, k_inputChannels
+print('k_freqbins : ' + str(k_freqbins) 
+	+ '    ' + 'k_numFrames: ' + str(k_numFrames) )
+#FLAGS.freqorientation, k_height, k_numFrames, k_inputChannels
 print('FLAGS.freqorientation: ' + str(FLAGS.freqorientation) 
 	+ ',   ' + 'k_height: ' + str(k_height) 
-	+ ',   ' + 'k_width: ' + str(k_width) 
+	+ ',   ' + 'k_numFrames: ' + str(k_numFrames) 
 	+ ',   ' + 'k_inputChannels: ' + str(k_inputChannels))
 #k_numClasses, validationSamples, trainingSamples
 print('k_numClasses: ' + str(k_numClasses)

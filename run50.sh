@@ -51,9 +51,10 @@ do
             mkdir "$OUTDIR/stderr"
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
-            runcmd+='--numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
-            runcmd+='--keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
-            runcmd+='--numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
+            runcmd+=' --freqbins 513 -- numFrames 424 '
+            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
+            runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
+            runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
                         # direct stdout and sterr from each run into their proper directories, but tww so we can still watch                                                     
                 eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR/stderr/stderr.log >&2)
         done
