@@ -14,7 +14,7 @@ orientationArray=(height channels)
 layers=2
 mtl=0
 
-indir=data50
+indir=data50Q
 
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
