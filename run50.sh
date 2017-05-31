@@ -51,7 +51,7 @@ do
             mkdir "$OUTDIR/stderr"
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
-            runcmd+=' --freqbins 513 -- numFrames 424 '
+            runcmd+=' --freqbins 513 --numFrames 424 '
             runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
