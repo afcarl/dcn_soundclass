@@ -1,7 +1,8 @@
 #!/bin/bash                                                                                                                                                                      
 # To store logs and see both stderr and stdout on the screen:                                                                                                                    
 #    nohup ./run50.sh >>logs/multilog.txt 2>&1 &                                                                                                                                 
-# Individual logs will also still get stored in their respective directories                                                                                                    
+# Individual logs will also still get stored in their respective directories      
+                                                                                              
 source activate tflow2
 DATE=`date +%Y.%m.%d`
 echo $DATE
@@ -20,7 +21,7 @@ mkdir $maindir
 epsilon=1.0
 optimizer=adam
 learningrate=.01
-orientationArray=(height channels)
+orientationArray=(height)
 layers=2
 mtl=0
 
@@ -61,7 +62,7 @@ do
             mkdir "$OUTDIR/stderr"
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
-            runcmd+=' --freqbins 513 --numFrames 424 '
+            runcmd+=' --freqbins 513 --numFrames 424  --convRows 9 '
             runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'

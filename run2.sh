@@ -4,17 +4,28 @@
 # Individual logs will also still get stored in their respective directories                                                                                                            
 source activate tflow2
 DATE=`date +%Y.%m.%d`
-maindir=logs.$DATE
+#maindir=logs.$DATE
+#mkdir $maindir
+
+if [ $# -eq 0 ]
+  then
+    echo "please supply output directory as a command line argument"
+    exit
+fi
+
+maindir=$1
 mkdir $maindir
 
 numconvlayers=2
 learningrate=.01
 optimizer=adam
 
-orientationArray=(channels) #(height)
+orientationArray=(height) #(height)
 epsilonArray=(1.0)
 
-mtlArray=(16)
+mtlArray=(0)
+
+indir=data2
 
 for  mtl in ${mtlArray[@]}
 do
@@ -32,10 +43,11 @@ do
             mkdir "$OUTDIR/log_graph"
             mkdir "$OUTDIR/checkpoints"
             # wrap python call in a string so we can do our fancy redirecting below
-            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 0 --checkpointPeriod 10  '
-            runcmd+='--numClasses 2 --batchsize 20 --n_epochs 100 --learning_rate ${learningrate}  --keepProb .5 '
-            runcmd+='--l1channels 32 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  --learnCondition whenWrong '
-            runcmd+='--adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'
+            runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 0 --checkpointPeriod 10  --indir ${indir}   '
+            runcmd+=' --freqbins 257 --numFrames 856 --convRows 9 '
+            runcmd+=' --numClasses 2 --batchsize 20 --n_epochs 100 --learning_rate ${learningrate}  --keepProb .5 '
+            runcmd+=' --l1channels 32 --l2channels 32 --fcsize 32 --freqorientation ${orientation}  --learnCondition whenWrong '
+            runcmd+=' --adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'
 			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch
         	eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR.stderr.log >&2)
         done

@@ -32,11 +32,14 @@ parser.add_argument('--keepProb', type=float, help='keep probablity for dropout 
 
 parser.add_argument('--freqorientation', type=str, help='freq as height or as channels', choices=["height","channels"], default="channels") #default for testing
 
-parser.add_argument('--numconvlayers', type=int, help='number of convolutional layers', choices=[1,2],  default=32) #default for testing
+parser.add_argument('--numconvlayers', type=int, help='number of convolutional layers', choices=[1,2],  default=2) #default for testing
 
 parser.add_argument('--l1channels', type=int, help='Number of channels in the first convolutional layer', default=32) #default for testing
 parser.add_argument('--l2channels', type=int, help='Number of channels in the second convolutional layer (ignored if numconvlayers is 1)', default=64) #default for testing
 parser.add_argument('--fcsize', type=int, help='Dimension of the final fully-connected layer', default=32) #default for testing
+
+parser.add_argument('--convRows', type=int, help='size of conv kernernel in freq dimension if orientation is height (otherwise ignored)',   default=5) #default for testing
+parser.add_argument('--convColumns', type=int, help='size of conv kernernel in temporal dimension ',   default=5) #default for testing
 
 parser.add_argument('--optimizer', type=str, help='optimizer', choices=["adam","gd"], default="gd") #default for testing
 parser.add_argument('--adamepsilon', type=float, help='epsilon param for adam optimizer', default=.1) 
@@ -105,9 +108,9 @@ print(':::::: k_downsampledWidth is ' + str(k_downsampledWidth))
 
 K_ConvRows=1      # default for freqs as channels
 if FLAGS.freqorientation == "height" :
-	K_ConvRows=5
+	K_ConvRows=FLAGS.convRows
 	
-K_ConvCols=5
+K_ConvCols=FLAGS.convColumns
 k_ConvStrideRows=1
 k_ConvStrideCols=1
 
@@ -132,7 +135,7 @@ k_vbatchsize = min(validationSamples, k_batchsize)
 k_numVBatches = validationSamples/k_vbatchsize
 print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize) + ' datasamples')
 
-k_batchesPerLossReport= 20  #writes loss to the console every n batches
+k_batchesPerLossReport= 100  #writes loss to the console every n batches
 
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
@@ -273,7 +276,8 @@ trainable=[]
 
 w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
-h1=tf.nn.relu(tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1, name="h1")
+l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
+h1=tf.nn.relu(l1preactivation, name="h1")
 # 2x2 max pooling
 h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
 
@@ -285,7 +289,9 @@ if K_NUMCONVLAYERS == 2 :
 	w2=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="w2")
 	b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 
-	h2=tf.nn.relu(tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2, name="h2")
+	l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2
+
+	h2=tf.nn.relu(l2preactivation, name="h2")
 
 	trainable.extend([w2, b2]) 
 
@@ -308,7 +314,8 @@ W_fc1 = tf.Variable(tf.truncated_normal([k_downsampledWidth * k_downsampledHeigh
 b_fc1 = tf.Variable(tf.constant(0.1, shape=[FC_SIZE]) , name="b_fc1")
 
 keepProb=tf.placeholder(tf.float32, (), name= "keepProb")
-h_fc1 = tf.nn.relu(tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) + b_fc1, name="h_fc1")
+fc1preactivation = tf.matmul(tf.nn.dropout(convlayers_output, keepProb), W_fc1) + b_fc1
+h_fc1 = tf.nn.relu(fc1preactivation, name="h_fc1")
 
 #Read out layer
 W_fc2 = tf.Variable(tf.truncated_normal([FC_SIZE, k_numClasses], stddev=0.1), name="W_fc2")
@@ -331,8 +338,6 @@ if k_mtlnumclasses :
 #could do a dropout here on h
 logits_ = tf.matmul(h_fc1, W_fc2)
 logits = tf.add(logits_ , b_fc2, name="logits")
-
-
 
 
 if k_mtlnumclasses : 
@@ -462,6 +467,14 @@ def validate(sess, printout=False) :
 def create_train_summaries ():
 		with tf.name_scope ( "train_summaries" ):
 			tf.summary.scalar ( "mean_loss" , meanloss_primary)
+			tf.summary.histogram ("w_1", w1)
+			tf.summary.histogram ("w_2", w2)
+			tf.summary.histogram ("w_fc1", W_fc1)
+			tf.summary.histogram ("w_fc2", W_fc2)
+			tf.summary.histogram ("l1preactivation", l1preactivation)
+			tf.summary.histogram ("l1preactivation", l1preactivation)
+			tf.summary.histogram ("fc1preactivation", fc1preactivation)
+
 			return tf.summary.merge_all ()
 
 mergedtrain = create_train_summaries()
