@@ -22,6 +22,7 @@ data2/validation-*
 data2/train-*
 *validation-*
 *train-*
+nohup.out
 *.pyc
 '#'*
 .\#*

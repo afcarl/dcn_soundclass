@@ -29,7 +29,8 @@ indir=data50Q
 
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
-fcsizeArray=(32)
+fcsize=32
+bnArray=(1 0)
 
 for orientation in ${orientationArray[@]}
 do
@@ -44,11 +45,11 @@ do
 
     for l2channels in ${l2channelsArray[@]}
     do
-        for fcsize in ${fcsizeArray[@]}
+        for bn in ${bnArray[@]}
         do
             #make output dir for paramter settings                                                                                                                               
             echo " -------       new batch run     --------"
-            OUTDIR="$maindir/l1r_${l1channels}.l2_${l2channels}.fc_${fcsize}.or_${orientation}"
+            OUTDIR="$maindir/l1r_${l1channels}.l2_${l2channels}.fc_${fcsize}.or_${orientation}.bn_${bn}"
             mkdir $OUTDIR
             echo "outdir is " $OUTDIR
 
@@ -63,7 +64,7 @@ do
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
             runcmd+=' --freqbins 513 --numFrames 424  --convRows 9 '
-            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  '
+            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  --batchnorm ${bn} '
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
                         # direct stdout and sterr from each run into their proper directories, but tww so we can still watch                                                     

@@ -140,6 +140,8 @@ print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of '
 #ESC-50 dataset has 50 classes of 40 sounds each
 k_batches_per_epoch = k_numClasses*40/k_batchsize
 k_batchesPerLossReport= k_batches_per_epoch  #writes loss to the console every n batches
+print('will write out report every ' + str(k_batchesPerLossReport) + ' batches')
+k_batchesPerLossReport=100
 
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
@@ -652,7 +654,7 @@ else :
 	print('k_OPTIMIZER: ' + str(k_OPTIMIZER))
 
 print('LEARNCONDITION: ' + LEARNCONDITION)
-print('batchnorm: ' + FLAGS.batchnorm)
+print('batchnorm: ' + str(FLAGS.batchnorm))
 print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 
 #OUTDIR
