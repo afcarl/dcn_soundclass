@@ -29,8 +29,6 @@ parser.add_argument('--learning_rate', type=float, help='learning rate', default
 parser.add_argument('--batchsize', type=int, help='number of data records per training batch', default=8) #default for testing
 parser.add_argument('--n_epochs', type=int, help='number of epochs to use for training', default=2) #default for testing
 parser.add_argument('--keepProb', type=float, help='keep probablity for dropout before 1st fully connected layer during training', default=1.0) #default for testing
-parser.add_argument('--batchnorm', type=int, help='0/1 - to batchnorm or not to batchnorm', choices=[0,1], default=1)
-
 
 parser.add_argument('--freqorientation', type=str, help='freq as height or as channels', choices=["height","channels"], default="channels") #default for testing
 
@@ -137,9 +135,7 @@ k_vbatchsize = min(validationSamples, k_batchsize)
 k_numVBatches = validationSamples/k_vbatchsize
 print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize) + ' datasamples')
 
-#ESC-50 dataset has 50 classes of 40 sounds each
-k_batches_per_epoch = k_numClasses*40/k_batchsize
-k_batchesPerLossReport= k_batches_per_epoch  #writes loss to the console every n batches
+k_batchesPerLossReport= 100  #writes loss to the console every n batches
 
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
@@ -209,14 +205,7 @@ def get_datafiles(a_dir, startswith):
     return  [a_dir + '/' + name for name in os.listdir(a_dir)
             if name.startswith(startswith)]
 
-def batch_norm(x, is_trainingP, scope):
-	with tf.variable_scope(scope):
-		return tf.layers.batch_normalization(x,
-				axis=3, # is this right? - our conv2D returns NHWC ordering? 
-				center=True, 
-				scale=True, 
-				training=is_trainingP,
-				name=scope+"_bn")
+
 
 
 #=============================================
@@ -287,17 +276,10 @@ trainable=[]
 
 w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
 b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
-# Do we still need b with the batch normalization? (see Ian Goodfellow chapter on batch normalization)
 l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
-
-isTraining=tf.placeholder(tf.bool, (), name= "isTraining") #passed in feeddict to sess.runs
-if (FLAGS.batchnorm==1) : 
-	bn1=batch_norm(l1preactivation, isTraining, "batch_norm_1")
-	h1=tf.nn.relu(bn1, name="h1")
-	# 2x2 max pooling
-	h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
-else : 
-	h1pooled = tf.nn.max_pool(l1preactivation, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
+h1=tf.nn.relu(l1preactivation, name="h1")
+# 2x2 max pooling
+h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
 
 trainable.extend([w1, b1]) 
 
@@ -307,14 +289,9 @@ if K_NUMCONVLAYERS == 2 :
 	w2=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="w2")
 	b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 
-	#still need b2 with batch normalization?
 	l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2
 
-	if (FLAGS.batchnorm==1) : 
-		bn2=batch_norm(l2preactivation, isTraining, "batch_norm_2")
-		h2=tf.nn.relu(bn2, name="h2")
-	else :
-		h2=tf.nn.relu(l2preactivation, name="h2")
+	h2=tf.nn.relu(l2preactivation, name="h2")
 
 	trainable.extend([w2, b2]) 
 
@@ -457,7 +434,7 @@ def validate(sess, printout=False) :
 			for i in range(k_numVBatches):
 				
 				X_batch, Y_batch = sess.run([vimageBatch, vlabelBatch])
-				batch_correct, predictions = sess.run([batchNumCorrect, softmax_preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1., isTraining : False}) 
+				batch_correct, predictions = sess.run([batchNumCorrect, softmax_preds], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.}) 
 				
 				total_correct_preds +=  batch_correct
 				#print (' >>>>  Batch " + str(i) + ' with batch_correct = ' + str(batch_correct) + ', and total_correct is ' + str(total_correct_preds))
@@ -474,7 +451,7 @@ def validate(sess, printout=False) :
 			print (u'(Validation EPOCH) num correct for EPOCH size of {0} ({1} batches) is {2}'.format(validationSamples , i+1 , total_correct_preds))
 			print('so the percent correction for validation set = ' + str(total_correct_preds/validationSamples))
 
-			msummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples, keepProb : 1., isTraining : False}) #using last batch to computer loss for summary
+			msummary = sess.run(mergedvalidation, feed_dict ={ X : X_batch , Y : Y_batch, wtf : total_correct_preds/validationSamples, keepProb : 1.}) #using last batch to computer loss for summary
 			
 
 		except Exception, e:
@@ -555,10 +532,10 @@ def trainModel():
 				
 				if k_mtlnumclasses :
 					X_batch, Y_batch, MTLY_batch = sess.run([imageBatch, labelBatch, mtltargetBatch])
-					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, MTLY : MTLY_batch, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it? 
+					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, MTLY : MTLY_batch})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it? 
 				else :
 					X_batch, Y_batch = sess.run([imageBatch, labelBatch])
-					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
+					_, loss_batch = sess.run([optimizer, meanloss], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 
 				batchcountloss += loss_batch
 
@@ -570,7 +547,7 @@ def trainModel():
 					print(u'Average loss per batch {0}: {1}'.format(batchcount, avgBatchLoss))
 					batchcountloss=0
 
-					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.0, isTraining : False }) #?? keep prob ??
+					tsummary = sess.run(mergedtrain, feed_dict ={ X : X_batch , Y : Y_batch, keepProb : 1.0 }) #?? keep prob ??
 					writer.add_summary(tsummary, global_step=batchcount)
 
 					vsummary=validate(sess)
@@ -652,7 +629,6 @@ else :
 	print('k_OPTIMIZER: ' + str(k_OPTIMIZER))
 
 print('LEARNCONDITION: ' + LEARNCONDITION)
-print('batchnorm: ' + FLAGS.batchnorm)
 print('k_mtlnumclasses: ' + str(k_mtlnumclasses))
 
 #OUTDIR
