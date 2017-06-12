@@ -135,7 +135,7 @@ k_vbatchsize = min(validationSamples, k_batchsize)
 k_numVBatches = validationSamples/k_vbatchsize
 print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of ' + str(k_vbatchsize) + ' datasamples')
 
-k_batchesPerLossReport= 100  #writes loss to the console every n batches
+k_batchesPerLossReport= 1 #writes loss to the console every n batches
 
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={

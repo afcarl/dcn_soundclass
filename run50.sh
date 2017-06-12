@@ -1,6 +1,6 @@
 #!/bin/bash                                                                                                                                                                      
 # To store logs and see both stderr and stdout on the screen:                                                                                                                    
-#    nohup ./run50.sh >>logs/multilog.txt 2>&1 &                                                                                                                                 
+#    nohup ./run50.sh logs >>logs/multilog.txt 2>&1 &                                                                                                                                 
 # Individual logs will also still get stored in their respective directories      
                                                                                               
 source activate tflow2
@@ -30,7 +30,7 @@ indir=data50Q
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
 fcsize=32
-bnArray=(1 0)
+bnArray=(0)
 
 for orientation in ${orientationArray[@]}
 do
@@ -64,11 +64,12 @@ do
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
             runcmd+=' --freqbins 513 --numFrames 424  --convRows 9 '
-            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate}  --batchnorm ${bn} '
+            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 50  --learning_rate ${learningrate} --batchnorm 0'
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
-                        # direct stdout and sterr from each run into their proper directories, but tww so we can still watch                                                     
-                eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR/stderr/stderr.log >&2)
+                        # direct stdout and sterr from each run into their proper directories, but tww so we can still watch  
+            print('---------- now run!!!')                                                   
+            eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR/stderr/stderr.log >&2)
         done
     done
 done

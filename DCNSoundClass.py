@@ -140,8 +140,8 @@ print(' ------- For validation, will run ' + str(k_numVBatches) + ' batches of '
 #ESC-50 dataset has 50 classes of 40 sounds each
 k_batches_per_epoch = k_numClasses*40/k_batchsize
 k_batchesPerLossReport= k_batches_per_epoch  #writes loss to the console every n batches
-print('will write out report every ' + str(k_batchesPerLossReport) + ' batches')
-k_batchesPerLossReport=100
+print(' ----------will write out report every ' + str(k_batchesPerLossReport) + ' batches')
+#k_batchesPerLossReport=1 #k_batches_per_epoch
 
 # Create list of paramters for serializing so that network can be properly reconstructed, and for documentation purposes
 parameters={
@@ -293,13 +293,16 @@ b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
 l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
 
 isTraining=tf.placeholder(tf.bool, (), name= "isTraining") #passed in feeddict to sess.runs
+
 if (FLAGS.batchnorm==1) : 
 	bn1=batch_norm(l1preactivation, isTraining, "batch_norm_1")
 	h1=tf.nn.relu(bn1, name="h1")
 	# 2x2 max pooling
-	h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
 else : 
-	h1pooled = tf.nn.max_pool(l1preactivation, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
+	h1=tf.nn.relu(l1preactivation, name="h1")
+
+h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
+
 
 trainable.extend([w1, b1]) 
 
@@ -493,12 +496,15 @@ def create_train_summaries ():
 		with tf.name_scope ( "train_summaries" ):
 			tf.summary.scalar ( "mean_loss" , meanloss_primary)
 			tf.summary.histogram ("w_1", w1)
+			tf.summary.histogram ("l1preactivation", l1preactivation)
+			tf.summary.histogram ("h_1", h1)
 			tf.summary.histogram ("w_2", w2)
+			tf.summary.histogram ("l2preactivation", l2preactivation)
+			tf.summary.histogram ("h_2", h2)
 			tf.summary.histogram ("w_fc1", W_fc1)
-			tf.summary.histogram ("w_fc2", W_fc2)
-			tf.summary.histogram ("l1preactivation", l1preactivation)
-			tf.summary.histogram ("l1preactivation", l1preactivation)
 			tf.summary.histogram ("fc1preactivation", fc1preactivation)
+			tf.summary.histogram ("h_fc1", h_fc1)
+			tf.summary.histogram ("w_fc2", W_fc2)
 
 			return tf.summary.merge_all ()
 
