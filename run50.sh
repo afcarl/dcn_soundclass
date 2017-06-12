@@ -30,7 +30,7 @@ indir=data50Q
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
 fcsize=32
-bnArray=(0)
+bnArray=(0 1) 
 
 for orientation in ${orientationArray[@]}
 do

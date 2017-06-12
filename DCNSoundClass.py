@@ -286,19 +286,20 @@ trainable=[]
 
 #Layer 1
 # 1 input channel, L1_CHANNELS output channels
-
-w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
-b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
-# Do we still need b with the batch normalization? (see Ian Goodfellow chapter on batch normalization)
-l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
-
 isTraining=tf.placeholder(tf.bool, (), name= "isTraining") #passed in feeddict to sess.runs
 
+w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
+
 if (FLAGS.batchnorm==1) : 
+	#convolve Wx (w/o adding bias) then relu 
+	l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') 
 	bn1=batch_norm(l1preactivation, isTraining, "batch_norm_1")
 	h1=tf.nn.relu(bn1, name="h1")
 	# 2x2 max pooling
 else : 
+	# convolve and add bias    Wx+b
+	b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
+	l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
 	h1=tf.nn.relu(l1preactivation, name="h1")
 
 h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
@@ -310,15 +311,16 @@ if K_NUMCONVLAYERS == 2 :
 	#Layer 2
 	#L1_CHANNELS input channels, L2_CHANNELS output channels
 	w2=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="w2")
-	b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
 
-	#still need b2 with batch normalization?
-	l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2
 
 	if (FLAGS.batchnorm==1) : 
+		#convolve (w/o adding bias) then norm 
+		l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') 
 		bn2=batch_norm(l2preactivation, isTraining, "batch_norm_2")
 		h2=tf.nn.relu(bn2, name="h2")
 	else :
+		b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
+		l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2
 		h2=tf.nn.relu(l2preactivation, name="h2")
 
 	trainable.extend([w2, b2]) 
