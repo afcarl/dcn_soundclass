@@ -68,7 +68,7 @@ do
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
                         # direct stdout and sterr from each run into their proper directories, but tww so we can still watch  
-            print('---------- now run!!!')                                                   
+            echo "---------- now run!!!"
             eval $runcmd > >(tee $OUTDIR/log.txt) 2> >(tee $OUTDIR/stderr/stderr.log >&2)
         done
     done

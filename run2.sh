@@ -23,7 +23,7 @@ optimizer=adam
 orientationArray=(height) #(height)
 epsilon=1.0
 
-bnArray=( 0 1)
+bnArray=(0 1)
 mtl=0
 indir=data2
 
