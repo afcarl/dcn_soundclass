@@ -43,7 +43,7 @@ do
             # wrap python call in a string so we can do our fancy redirecting below
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 0 --checkpointPeriod 2  --indir ${indir}   '
             runcmd+=' --freqbins 257 --numFrames 856 --convRows 9 '
-            runcmd+=' --numClasses 2 --batchsize 20 --n_epochs 20 --learning_rate ${learningrate}  --keepProb .5  --batchnorm ${bn} '
+            runcmd+=' --numClasses 2 --batchsize 20 --n_epochs 2 --learning_rate ${learningrate}  --keepProb .5  --batchnorm ${bn} '
             runcmd+=' --l1channels 32 --l2channels 64 --fcsize 32 --freqorientation ${orientation}  --learnCondition whenWrong '
             runcmd+=' --adamepsilon ${epsilon} --optimizer ${optimizer} --numconvlayers ${numconvlayers} --mtlnumclasses ${mtl}'
 			# direct stdout and sterr from each run into their proper directories, but tww so we can still watch

@@ -289,6 +289,7 @@ trainable=[]
 isTraining=tf.placeholder(tf.bool, (), name= "isTraining") #passed in feeddict to sess.runs
 
 w1=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, k_inputChannels, L1_CHANNELS], stddev=0.1), name="w1")
+trainable.extend([w1])
 
 if (FLAGS.batchnorm==1) : 
 	#convolve Wx (w/o adding bias) then relu 
@@ -299,19 +300,18 @@ if (FLAGS.batchnorm==1) :
 else : 
 	# convolve and add bias    Wx+b
 	b1=tf.Variable(tf.constant(0.1, shape=[L1_CHANNELS]), name="b1")
+	trainable.extend([b1])
 	l1preactivation=tf.nn.conv2d(x_image, w1, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b1
 	h1=tf.nn.relu(l1preactivation, name="h1")
 
 h1pooled = tf.nn.max_pool(h1, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME')
 
 
-trainable.extend([w1, b1]) 
-
 if K_NUMCONVLAYERS == 2 :
 	#Layer 2
 	#L1_CHANNELS input channels, L2_CHANNELS output channels
 	w2=tf.Variable(tf.truncated_normal([K_ConvRows, K_ConvCols, L1_CHANNELS, L2_CHANNELS], stddev=0.1), name="w2")
-
+	trainable.extend([w2])
 
 	if (FLAGS.batchnorm==1) : 
 		#convolve (w/o adding bias) then norm 
@@ -320,10 +320,10 @@ if K_NUMCONVLAYERS == 2 :
 		h2=tf.nn.relu(bn2, name="h2")
 	else :
 		b2=tf.Variable(tf.constant(0.1, shape=[L2_CHANNELS]), name="b2")
+		trainable.extend([b2])
 		l2preactivation= tf.nn.conv2d(h1pooled, w2, strides=[1, k_ConvStrideRows, k_ConvStrideCols, 1], padding='SAME') + b2
 		h2=tf.nn.relu(l2preactivation, name="h2")
 
-	trainable.extend([w2, b2]) 
 
 	with tf.name_scope ( "Conv_layers_out" ):
 		h2pooled = tf.nn.max_pool(h2, ksize=[1, k_poolRows, 2, 1], strides=[1, k_poolStrideRows, 2, 1], padding='SAME', name='h2_pooled')
@@ -440,10 +440,12 @@ tf.add_to_collection(tf.GraphKeys.USEFUL, X)    #input place holder
 tf.add_to_collection(tf.GraphKeys.USEFUL, keepProb) #place holder
 tf.add_to_collection(tf.GraphKeys.USEFUL, softmax_preds)
 tf.add_to_collection(tf.GraphKeys.USEFUL, w1)
-tf.add_to_collection(tf.GraphKeys.USEFUL, b1)
+if (FLAGS.batchnorm==0) :
+	tf.add_to_collection(tf.GraphKeys.USEFUL, b1)
 tf.add_to_collection(tf.GraphKeys.USEFUL, w2)
-tf.add_to_collection(tf.GraphKeys.USEFUL, b2)
 
+if (FLAGS.batchnorm==0) :
+	tf.add_to_collection(tf.GraphKeys.USEFUL, b2)
 tf.add_to_collection(tf.GraphKeys.USEFUL, W_fc1)
 tf.add_to_collection(tf.GraphKeys.USEFUL, b_fc1)
 tf.add_to_collection(tf.GraphKeys.USEFUL, W_fc2)
