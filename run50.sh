@@ -3,7 +3,7 @@
 #    nohup ./run50.sh logs >>logs/multilog.txt 2>&1 &                                                                                                                                 
 # Individual logs will also still get stored in their respective directories      
                                                                                               
-source activate tflow2A
+source activate tflow2a
 DATE=`date +%Y.%m.%d`
 echo $DATE
 #maindir=logs.$DATE
