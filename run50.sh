@@ -3,7 +3,7 @@
 #    nohup ./run50.sh logs >>logs/multilog.txt 2>&1 &                                                                                                                                 
 # Individual logs will also still get stored in their respective directories      
                                                                                               
-source activate tflow2
+source activate tflow2A
 DATE=`date +%Y.%m.%d`
 echo $DATE
 #maindir=logs.$DATE
@@ -30,7 +30,7 @@ indir=data50Q
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
 fcsize=32
-bnArray=(0 1) 
+bnArray=(0) 
 
 for orientation in ${orientationArray[@]}
 do
