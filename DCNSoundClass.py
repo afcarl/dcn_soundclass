@@ -571,10 +571,10 @@ def trainModel():
 				
 				if k_mtlnumclasses :
 					X_batch, Y_batch, MTLY_batch = sess.run([imageBatch, labelBatch, mtltargetBatch])
-					_, loss_batch = sess.run([optimizer, meanloss, extra_update_ops], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, MTLY : MTLY_batch, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it? 
+					_, loss_batch, _nada = sess.run([optimizer, meanloss, extra_update_ops], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, MTLY : MTLY_batch, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it? 
 				else :
 					X_batch, Y_batch = sess.run([imageBatch, labelBatch])
-					_, loss_batch = sess.run([optimizer, meanloss, extra_update_ops], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
+					_, loss_batch, _nada = sess.run([optimizer, meanloss, extra_update_ops], feed_dict ={ X : X_batch , Y : Y_batch, keepProb : k_keepProb, isTraining : True})   #DO WE NEED meanloss HERE? Doesn't optimer depend on it?
 
 				batchcountloss += loss_batch
 
