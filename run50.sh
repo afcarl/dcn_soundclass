@@ -30,7 +30,7 @@ indir=data50Q
 l1channels=0 # SET CONDITIONALLY BELOW
 l2channelsArray=(64)
 fcsize=32
-bnArray=(0) 
+bnArray=(1) 
 
 for orientation in ${orientationArray[@]}
 do
@@ -64,7 +64,7 @@ do
             # wrap python call in a string so we can do our fancy redirecting below                                                                                              
             runcmd='python DCNSoundClass.py --outdir $OUTDIR --checkpointing 1 --checkpointPeriod 500  --indir ${indir} '
             runcmd+=' --freqbins 513 --numFrames 424  --convRows 9 '
-            runcmd+=' --numClasses 50 --batchsize 20 --n_epochs 100  --learning_rate ${learningrate} --batchnorm ${bn}'
+            runcmd+=' --numClasses 50 --batchsize 10 --n_epochs 100  --learning_rate ${learningrate} --batchnorm ${bn}'
             runcmd+=' --keepProb .5 --l1channels ${l1channels} --l2channels ${l2channels} --fcsize ${fcsize} --freqorientation ${orientation}  '
             runcmd+=' --numconvlayers ${layers} --adamepsilon ${epsilon} --optimizer ${optimizer} --mtlnumclasses ${mtl}'
                         # direct stdout and sterr from each run into their proper directories, but tww so we can still watch  

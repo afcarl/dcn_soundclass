@@ -10,8 +10,8 @@ To run this model,
 1) first get the original raw data.
 It is messy, uneven lengths, ogg format, some mono, some stero. 
 
-In some origigData directory, 
-pro mpt> git clone  https://github.com/karoldvl/ESC-50.git
+In some origData directory, 
+prompt> git clone  https://github.com/karoldvl/ESC-50.git
 
 2) Next we'll massage the data to make it uniform, and convert the audio files to 
 spectrogram files in tiff format. 
@@ -53,7 +53,7 @@ This notebook also includes code for generating a label file (text file with lis
 +++++++++++++++
 
 Note: You can test and explore this model with a tiny subset of the ESC-50 sounds provided with the git repository. 
-./data2 contains dog and vird sounds, already converted from sounds -> to spectorgrams -> separated into train/ and test/ folders. All you need to do is 
+./data2 contains dog and bird sounds, already converted from sounds -> to spectorgrams -> separated into train/ and test/ folders. All you need to do is 
 a) navigate to the data2 directory and run the runcmd to convert the data to TFRecords (or runcmd.2label.txt to include secondary labels for MTL), and then 
 b) go to the main project folder and run 
    prompt> python DCNSoundClass.py
